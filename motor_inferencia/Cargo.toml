@@ -1,0 +1,8 @@
+[package]
+name = "motor_inferencia"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+candle-core = { path = "../candle/candle-core", features = ["cuda"] }
+candle-nn = { path = "../candle/candle-nn", features = ["cuda"] }

@@ -1,0 +1,23 @@
+services:
+  vit-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vit_research_engine
+    # Aumenta a memória compartilhada para evitar gargalos na transferência de tensores entre processos
+    shm_size: '16gb'
+    # Concede privilégios para leitura de contadores de hardware (NVIDIA Nsight Compute)
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      # Mapeia o código-fonte atual para dentro do contêiner
+      - .:/workspace:Z
+      # Mapeia o seu SSD NVMe de 2TB onde as imagens histológicas (ORCA/TCGA) estarão armazenadas
+      - /caminho/no/fedora/para/suas/imagens:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, compute, utility] 
