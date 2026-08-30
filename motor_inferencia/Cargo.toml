@@ -6,3 +6,8 @@ edition = "2024"
 [dependencies]
 candle-core = { path = "../candle/candle-core", features = ["cuda"] }
 candle-nn = { path = "../candle/candle-nn", features = ["cuda"] }
+candle-transformers = { path = "../candle/candle-transformers", features = ["cuda"] }
+
+image = "0.24.9"
+hf-hub = "0.3.2"
+anyhow = "1.0.86"
