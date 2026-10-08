@@ -3,11 +3,14 @@ name = "motor_inferencia"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-candle-core = { path = "../candle/candle-core", features = ["cuda"] }
-candle-nn = { path = "../candle/candle-nn", features = ["cuda"] }
-candle-transformers = { path = "../candle/candle-transformers", features = ["cuda"] }
+[features]
+default = []
+cuda = ["candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
 
+[dependencies]
+candle-core = { path = "../candle/candle-core" }
+candle-nn = { path = "../candle/candle-nn" }
+candle-transformers = { path = "../candle/candle-transformers" }
 image = "0.24.9"
 hf-hub = "0.3.2"
 anyhow = "1.0.86"

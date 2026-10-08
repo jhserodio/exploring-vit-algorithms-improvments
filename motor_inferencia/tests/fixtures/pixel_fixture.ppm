@@ -1,0 +1,6 @@
+P3
+# Deterministic, synthetic CPU preprocessing fixture (not pathology data)
+2 2
+255
+255 0 0   0 255 0
+0 0 255   255 255 255

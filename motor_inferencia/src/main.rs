@@ -1,49 +1,90 @@
-use anyhow::Result;
-use candle_core::{DType, Device, Tensor};
-use image::{ImageBuffer, Rgb, io::Reader as ImageReader};
+mod dinov2;
+mod preprocess;
 
-fn vit_image_load(path: &str, device: &Device) -> Result<Tensor> {
-    println!("Image load: {}", path);
+use anyhow::{Context, Result, bail};
+use candle_core::Device;
+use std::{env, path::PathBuf};
 
-    let img = ImageReader::open(path)?.decode()?;
-
-    let img_resized = img.resize_exact(224, 224, image::imageops::FilterType::Triangle);
-    let img_rgb = img_resized.to_rgb8();
-
-    let (width, height) = img_rgb.dimensions();
-    let channels = 3;
-
-    let img_data: Vec<f32> = img_rgb
-        .into_raw()
-        .into_iter()
-        .map(|p| p as f32 / 255.0)
-        .collect();
-
-    let tensor = Tensor::from_vec(img_data, (height as usize, width as usize, chanells));
-
-    let tensor_chw = tensor.permute((2, 0, 1))?;
-
-    let tensor_final = tensor_chw
-        .unsqueeze(0)?
-        .to_dtype(DType::F32)?
-        .to_device(device)?;
+fn usage() -> &'static str {
+    "Usage: cargo run --release [--features cuda] -- --image IMAGE --weights MODEL.SAFETENSORS (--cpu | --cuda)\n\
+     DINOv2 Base/518 native-resolution feature extractor. Outputs a [1,768] CLS embedding.\n\
+     NOTE: This is not an OSCC classifier or a scientifically validated reference yet."
 }
 
 fn main() -> Result<()> {
-    let device = Device::new_cuda(0)?;
-    println!("Activate GPU to vision process");
+    let mut image: Option<PathBuf> = None;
+    let mut weights: Option<PathBuf> = None;
+    let mut requested_device: Option<&str> = None;
+    let mut args = env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--image" => {
+                image = Some(PathBuf::from(
+                    args.next().context("--image requires a path")?,
+                ))
+            }
+            "--weights" => {
+                weights = Some(PathBuf::from(
+                    args.next().context("--weights requires a path")?,
+                ))
+            }
+            "--cpu" => {
+                if requested_device.is_some() {
+                    bail!("choose exactly one device");
+                }
+                requested_device = Some("cpu");
+            }
+            "--cuda" => {
+                if requested_device.is_some() {
+                    bail!("choose exactly one device");
+                }
+                requested_device = Some("cuda");
+            }
+            "--help" | "-h" => {
+                println!("{}", usage());
+                return Ok(());
+            }
+            _ => bail!("unknown argument '{arg}'\n{}", usage()),
+        }
+    }
+    let image = image.context(usage())?;
+    let weights = weights.context(usage())?;
+    let device = match requested_device.context("specify exactly one of --cpu or --cuda")? {
+        "cpu" => Device::Cpu,
+        "cuda" => {
+            #[cfg(feature = "cuda")]
+            {
+                Device::new_cuda(0).context("CUDA initialization failed")?
+            }
+            #[cfg(not(feature = "cuda"))]
+            {
+                bail!("CUDA is disabled; rebuild using --features cuda")
+            }
+        }
+        _ => unreachable!(),
+    };
 
-    let img_path("teste.jpg");
-
-    let img_false: ImgBuffer<Rgb<u8>, Vec<u8>> = ImgBuffer::new(500, 500);
-    img_false.save(img_path)?;
-
-    let tensor_entry = vit_image_load(img_path, &device)?;
-
-    println!("Success to Generate Img Tensor");
-    println!("Expected Shape: [1, 3, 224, 224]");
-
-    std::fs::remove_file(img_path)?;
-
+    let input_cpu = preprocess::open_and_preprocess(&image)?;
+    println!("preprocessing profile: dinov2-base-native518-v1");
+    println!(
+        "input shape: {:?}, dtype: {:?}",
+        input_cpu.dims(),
+        input_cpu.dtype()
+    );
+    let input = input_cpu.to_device(&device)?;
+    let model = dinov2::DinoV2Base::load(&weights, &device)?;
+    let embedding = model.forward_features(&input)?;
+    let cpu_output = embedding.to_device(&Device::Cpu)?.to_vec2::<f32>()?;
+    if cpu_output.iter().flatten().any(|v| !v.is_finite()) {
+        bail!("non-finite feature values; inference is invalid");
+    }
+    println!(
+        "output: embedding, shape {:?}, finite: true",
+        embedding.dims()
+    );
+    println!("CLS embedding first 8 values: {:?}", &cpu_output[0][..8]);
+    println!(
+        "Research status: numerical equivalence to the Hugging Face reference remains to be validated."
+    );
     Ok(())
 }

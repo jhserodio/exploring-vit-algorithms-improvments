@@ -1,21 +1,23 @@
+x-research-base: &research-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  working_dir: /workspace/motor_inferencia
+  volumes:
+    - .:/workspace
+    - ${DATA_DIR:-./data}:/data:ro
+    - ${MODEL_DIR:-./models}:/models:ro
+
 services:
-  vit-engine:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  vit-cpu:
+    <<: *research-base
+    # CPU-only test execution without claiming a GPU device.
 
-    profiles: ["benchmark"]
-
-    working_dir: /workspace/motor_inferencia
-
-    volumes:
-      - .:/workspace
-      - ${DATA_DIR}:/data:ro
-      - ${HF_CACHE_DIR}:/root/.cache/huggingface/hub:ro
-
+  vit-gpu:
+    <<: *research-base
+    profiles: ["gpu"]
     environment:
-      RAYON_NUM_THREADS: "4"
-
+      CUDA_COMPUTE_CAP: "120"
     deploy:
       resources:
         reservations:
@@ -23,30 +25,4 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
-  ollama:
-    image: ollama/ollama:latest
-
-    profiles: ["assistant"]
-
-    ports:
-      - "127.0.0.1:11434:11434"
-
-    environment:
-      OLLAMA_NUM_PARALLEL: "1"
-      OLLAMA_MAX_LOADED_MODELS: "1"
-      OLLAMA_KEEP_ALIVE: "0"
-
-    volumes:
-      - ollama_models:/root/.ollama
-
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-volumes:
-  ollama_models:
+    # Ordinary inference needs no SYS_ADMIN. Profile separately if needed.

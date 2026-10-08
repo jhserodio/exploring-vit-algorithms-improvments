@@ -1,0 +1,10 @@
+# Large/private data and model checkpoints must stay off Git.
+/models/
+/data/
+/results/
+/target/
+**/target/
+.env
+*.safetensors
+*.pt
+*.pth
