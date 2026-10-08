@@ -3,21 +3,50 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: vit_research_engine
-    # Aumenta a memória compartilhada para evitar gargalos na transferência de tensores entre processos
-    shm_size: '16gb'
-    # Concede privilégios para leitura de contadores de hardware (NVIDIA Nsight Compute)
-    cap_add:
-      - SYS_ADMIN
+
+    profiles: ["benchmark"]
+
+    working_dir: /workspace/motor_inferencia
+
     volumes:
-      # Mapeia o código-fonte atual para dentro do contêiner
-      - .:/workspace:Z
-      # Mapeia o seu SSD NVMe de 2TB onde as imagens histológicas (ORCA/TCGA) estarão armazenadas
-      - /caminho/no/fedora/para/suas/imagens:/data
+      - .:/workspace
+      - ${DATA_DIR}:/data:ro
+      - ${HF_CACHE_DIR}:/root/.cache/huggingface/hub:ro
+
+    environment:
+      RAYON_NUM_THREADS: "4"
+
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu, compute, utility] 
+              capabilities: [gpu]
+
+  ollama:
+    image: ollama/ollama:latest
+
+    profiles: ["assistant"]
+
+    ports:
+      - "127.0.0.1:11434:11434"
+
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_KEEP_ALIVE: "0"
+
+    volumes:
+      - ollama_models:/root/.ollama
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  ollama_models:

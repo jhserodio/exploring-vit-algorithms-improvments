@@ -1,11 +1,11 @@
 # Usa a imagem oficial de desenvolvimento da NVIDIA com CUDA 12.4
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
+ENV CUDA_COMPUTE_CAP=120
 
 # Evita prompts interativos durante a construção
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Fixa a arquitetura da RTX 5070 Ti (Ada Lovelace) para o compilador PTX
-ENV CUDA_COMPUTE_CAP=89
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
