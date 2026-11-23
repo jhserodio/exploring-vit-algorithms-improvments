@@ -10,7 +10,7 @@
 
 The test framework is designed to be **model-agnostic**. DINOv2 Base is only the **first checkpoint**. The benchmarking system and its future task-specific metrics must not depend on it.
 
-> **Research status:** Phase 0 is a proposed, unverified inference baseline. No medical classification, localization, validation, multi-model benchmark, or Ollama/llama.cpp agent is implemented yet. This is not a medical diagnostic application.
+> **Research status (2026-11-23):** Four CPU unit tests, format, Clippy and help-command smoke passed in [GitHub Actions](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/37717374470). DINOv2 Base inference **code** exists; original-checkpoint loading, RTX 5070 Ti execution and numerical reference parity remain **unverified**. This is not an OSCC diagnosis system.
 
 ## Hardware and execution
 
@@ -23,7 +23,7 @@ Ollama or llama.cpp may become an **optional** experiment-control assistant; the
 
 ## Phase 0 — Get a trustworthy starting point
 
-Read **[PHASE0.md](PHASE0.md)** for the full instructions, exact preprocessing profile, known limitations and validation checklist.
+Read **[PHASE0.md](PHASE0.md)** for complete runnable checks, model setup, SELinux behavior, explicit CPU/CUDA commands and acceptance criteria.
 
 CPU-only correctness tests:
 
@@ -33,13 +33,22 @@ cd motor_inferencia
 cargo test --no-default-features
 ```
 
-CUDA feature extraction of a local input with the original `facebook/dinov2-base` weights (after validating toolchain compatibility):
+CUDA feature extraction of a local input with original `facebook/dinov2-base` weights (after validating toolchain compatibility and preparing those files):
 
 ```bash
 cd motor_inferencia
 cargo run --release --features cuda -- \
   --cuda --weights ../models/model.safetensors --image ../data/example.png
 ```
+
+Docker Compose from repository root (after placing the required `models/model.safetensors` and `data/example.png`):
+
+```bash
+docker compose run --build --rm vit-cpu
+docker compose --profile gpu run --build --rm vit-gpu
+```
+
+The GPU service runs actual CUDA inference rather than CPU tests. Compose volumes use SELinux shared-label `:z`, which **relabels host paths**; see [PHASE0.md](PHASE0.md) before using sensitive datasets.
 
 This baseline intentionally uses **518 × 518** images to retain the model's original positional grid; it does not reproduce the default Hugging Face 224-pixel preprocessing. Output is a **CLS embedding `[1,768]`**, not a classification score. Do not treat a successful run as numerical equivalence until the independent reference-parity test passes.
 
@@ -63,7 +72,7 @@ Patient/slide-grouped dataset + labels
 
 For scientific comparisons, preserve identical patients and scoring protocols, model-specific native preprocessing, explicit task/output compatibility, and immutable experiment configurations. Compare kernel optimizations against a fixed backbone/checkpoint, *separately* from backbone-vs-backbone comparisons.
 
-See **[roadmap.md](roadmap.md)** for the phased implementation plan, scientific questions and acceptance gates.
+See **[roadmap.md](roadmap.md)** for the authoritative 10-phase plan and **[test-checklist-roadmap.md](test-checklist-roadmap.md)** for the compact execution tracker.
 
 ## Data and checkpoints
 
