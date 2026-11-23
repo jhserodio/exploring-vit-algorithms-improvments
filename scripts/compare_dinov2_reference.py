@@ -78,6 +78,21 @@ def main() -> int:
     if not np.isfinite(expected).all() or not np.isfinite(actual).all():
         raise ValueError("non-finite output")
 
+    # Verify that the exported CLS and the spatial CHW map preserve the exact
+    # bit patterns and patch ordering of the complete Rust hidden state.
+    cls_export = np.fromfile(str(prefix) + ".embedding.f32le", dtype="<f4")
+    if cls_export.size != 768 or not np.array_equal(cls_export, actual[0]):
+        raise ValueError("Rust CLS export does not match hidden-state token 0")
+
+    spatial = np.fromfile(str(prefix) + ".spatial.f32le", dtype="<f4")
+    if spatial.size != 768 * 37 * 37:
+        raise ValueError(f"invalid spatial map size: {spatial.size}")
+    spatial = spatial.reshape(768, 37, 37)
+    rust_chw = actual[1:].reshape(37, 37, 768).transpose(2, 0, 1)
+    if not np.array_equal(spatial, rust_chw):
+        raise ValueError("Rust spatial-map token order / CHW conversion is inconsistent")
+    expected_chw = expected[1:].reshape(37, 37, 768).transpose(2, 0, 1)
+
     def measure(a, b):
         delta = a - b
         return {
@@ -88,8 +103,9 @@ def main() -> int:
     cls = measure(actual[:1], expected[:1])
     patches = measure(actual[1:], expected[1:])
     full = measure(actual, expected)
+    spatial_parity = measure(spatial, expected_chw)
     passed = all(m["max_abs"] <= args.atol and m["relative_l2"] <= args.rtol
-                 for m in (cls, patches, full))
+                 for m in (cls, patches, full, spatial_parity))
     report = {
         "experiment": "dinov2-native518-identical-tensor-parity",
         "passed": passed,
@@ -98,6 +114,9 @@ def main() -> int:
         "cls": cls,
         "patch_tokens": patches,
         "full_hidden": full,
+        "spatial_map": spatial_parity,
+        "cls_export_exact": True,
+        "spatial_map_order_exact": True,
         "tolerances": {"max_abs": args.atol, "relative_l2": args.rtol},
         "checkpoint_sha256": sha256(weights),
         "config_sha256": sha256(config),
@@ -107,6 +126,15 @@ def main() -> int:
         "numpy": np.__version__,
         "rust_backend": "ndarray-cpu",
     }
+    provenance = model_dir / "checkpoint-source.json"
+    if provenance.exists():
+        metadata = json.loads(provenance.read_text(encoding="utf-8"))
+        if metadata.get("checkpoint_sha256") != report["checkpoint_sha256"]:
+            raise ValueError("download provenance does not match checkpoint bytes")
+        if metadata.get("config_sha256") != report["config_sha256"]:
+            raise ValueError("download provenance does not match model config")
+        report["model_id"] = metadata.get("model_id")
+        report["checkpoint_revision"] = metadata.get("revision")
     report_path = Path(str(prefix) + ".parity.json")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
