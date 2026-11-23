@@ -26,24 +26,36 @@ benchmarks e interfaces; não implementa algoritmos de pesquisa.
 e guardar os resultados. Não é evidência de algoritmo otimizado
 nem de inferência do modelo completo. [Fase 1](PHASE1.md).
 
-## Fase 2 — harness [PRÓXIMA]
+## Fase 2 — ORCA e harness [AUDITORIA CONCLUÍDA; IMPLEMENTAÇÃO PENDENTE]
 
-- [ ] Manifest com origem/hash de imagens existentes e fixtures
-  **numéricas** versionadas para operações.
-- [ ] Interface baseline/candidate/mock e testes de erros deliberados.
-- [ ] Comparador `max_abs`, `relative_L2`, shape, dtype, spatial order.
-- [ ] Geometria de tiles/crops **derivados das imagens existentes**
-  e alinhamento de máscaras somente quando já anotadas.
-- [ ] Relatórios JSON e CI de testes sem GPU nem dados privados.
+- [x] Auditar 400 PNGs ORCA: **200 pares** 512×512 (100 treino /
+  100 teste), todos pareados, íntegros e sem duplicatas.
+- [x] Verificar classes reais **0/255** nas 200 máscaras,
+  101 IDs TCGA sem overlap de treino/teste e
+  [evidência](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45269827098).
+- [x] Quantificar perda aproximada no crop V0: **8,78%** dos
+  pixels 255 excluídos; 59/200 máscaras perdem mais de 10%.
+- [ ] Documentar origem da variante binária e autorização
+  de redistribuição do ORCA já rastreado no Git.
+- [ ] Criar manifest imutável de pares/hashes/TCGA-case/split.
+- [ ] Implementar oráculo, executor mock e comparador numérico.
+- [ ] Implementar alinhamento imagem/máscara 512→592→518,
+  nearest-neighbor na máscara e grade 37×37.
+- [ ] Executar testes negativos de máscara trocada, classe
+  inválida, crop incorreto e split com vazamento.
+- [ ] Relatórios JSON por caso e CI de regressão sem
+  publicar imagens/máscaras derivadas.
 
-[Detalhamento Fase 2](docs/phase2-test-harness.md).
+[Detalhamento Fase 2](docs/phase2-test-harness.md) ·
+[Auditoria ORCA](docs/orca-dataset-audit.md).
+
 
 ## Fases 3–7 [PLANEJADAS]
 
 - [ ] Adaptadores e interfaces mock de experimentos.
 - [ ] Benchmark A/B e instrumentação CPU/GPU.
-- [ ] Validação de schemas e proveniência espacial do acervo existente,
-  sem fabricar imagens ou anotações.
+- [ ] Validar esquema binário ORCA e proveniência WSI/µm/px
+  quando disponível, preservando os dois cores por caso.
 - [ ] Proveniência e relatórios reproduzíveis.
 - [ ] CLI/runbook e teste end-to-end da sandbox.
 

@@ -21,10 +21,11 @@ clínica ou avaliação real de câncer.
   sem GPU e CI CPU. Rust 1.100.0 fixado em `rust-toolchain.toml`,
   imagens e workflows. [CI CPU](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561), [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586);
   preflight e Compose documentados em [PHASE1.md](PHASE1.md).
-- **Fase 2: planejada/detalhada.** Harness com vetores numéricos de
-  teste e **imagens do acervo existente**, oráculos, comparadores,
-  testes negativos e relatório JSON.
-  [Especificação](docs/phase2-test-harness.md).
+- **Fase 2: corpus auditado, harness ainda pendente.** Temos **200
+  imagens RGB 512×512 e 200 máscaras binárias 0/255**, em 100
+  pares training e 100 testing; 101 IDs TCGA sem overlap.
+  [Auditoria completa](docs/orca-dataset-audit.md) e
+  [harness](docs/phase2-test-harness.md).
 
 `source-ready` e `sandbox-config-ready` não significam que
 a RTX 5070 Ti já executou os kernels. O estado `gpu-verified`
@@ -91,9 +92,12 @@ Para repetir localmente, consultar [PHASE0.md](PHASE0.md).
 [Harness de testes Fase 2](docs/phase2-test-harness.md) ·
 [Checklist operacional](test-checklist-roadmap.md).
 
-O harness de imagens usa apenas o acervo já existente via `DATA_DIR`.
-Qualquer crop, tile, resize ou variante espacial deve ser derivado de
-um arquivo original, preservando hash e geometria. Máscaras de referência
-somente se já estiverem anotadas; não se criam rótulos tumorais fictícios.
-Dados, pesos, features derivadas e relatórios sensíveis permanecem
-fora do Git, conforme `.gitignore`.
+O harness lê os pares já existentes em `ORCA_512x512/`; para
+montá-los nos containers, configurar `DATA_DIR=./ORCA_512x512`.
+Cropping e resize mantêm o hash e a geometria do par;
+máscaras devem usar nearest-neighbor, sem classes inventadas.
+**Aproximadamente 8,78% dos pixels 255 ficam fora do crop
+central atual do V0.** Os 400 PNGs já estão rastreados
+neste repositório público: revisar licença e atribuição
+antes de republicação. Resultados, pesos e derivados
+devem continuar fora do Git.

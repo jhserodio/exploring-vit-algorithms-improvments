@@ -64,3 +64,24 @@ uma imagem existente e registra sua origem. As máscaras, se necessárias,
 devem vir de anotações já disponíveis; quando não houver máscara,
 verificar geometria sem alegar localização tumoral. Matrizes numéricas
 artificiais permanecem válidas para testes isolados de operadores.
+
+
+## Inventário ORCA efetivamente presente (2026-11-23)
+
+A branch agora contém **200 imagens RGB8 e 200 máscaras
+grayscale8 512×512**, em 100 pares training e 100 testing.
+O [workflow de auditoria](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45269827098)
+confirmou os 200 pareamentos e a ausência de sobreposição
+entre os 101 IDs de caso TCGA inferidos de nomes.
+
+**As 200 máscaras são binárias 0/255, não as três classes
+do ORCA descritas originalmente.** Portanto a Fase 2 usa
+um contrato de anotação binária com proveniência a confirmar;
+não deve inventar a classe de tecido não tumoral.
+O preprocess V0 atual exclui aproximadamente 8,78% dos
+pixels brancos anotados, exigindo testes de cobertura
+e registro espacial. Inventário: [ORCA](orca-dataset-audit.md).
+
+Os PNGs estão atualmente commitados no Git público;
+não afirmar que ainda se encontram fora do repositório.
+Revisar atribuição e redistribuição antes de criar novas cópias.

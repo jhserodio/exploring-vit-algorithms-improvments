@@ -95,58 +95,91 @@ continua pendente como validação de hardware do futuro executor, não como
 prova falsa de execução atual.** Cheque a execução em
 [docs/phase1-design.md](docs/phase1-design.md).
 
-## Fase 2 — Infraestrutura de fixtures, testes e oráculos [PRÓXIMA]
+## Fase 2 — Harness sobre o acervo ORCA 512×512 [PRÓXIMA]
 
-**Objetivo:** montar um harness de testes capaz de aceitar uma futura
-implementação de algoritmo e distinguir erro, desempenho e efeito espacial
-sem precisar escrever o algoritmo. Detalhamento:
-[docs/phase2-test-harness.md](docs/phase2-test-harness.md).
+**Objetivo:** preparar testes e comparadores para receber futuramente
+um algoritmo, usando exclusivamente as imagens e máscaras existentes,
+sem implementar melhorias, novos modelos ou treinamento. O corpus real
+de entrada já está inventariado em
+[docs/orca-dataset-audit.md](docs/orca-dataset-audit.md), com
+[CI de auditoria dos 400 PNGs](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45269827098).
+Especificação detalhada: [Fase 2](docs/phase2-test-harness.md).
 
-### 2.A — Catálogo e contratos de fixtures
-- [ ] Definir manifest JSON versionado: `case_id`, `seed`, `model_id`,
-  `input_shape`, `dtype`, `layout`, `device`, `tags`, `expected`,
-  `tolerances`, `source_hash`.
-- [ ] Fixtures determinísticas para GEMM, residual, softmax, LayerNorm, GELU,
-  QKV/atenção, patch projection e conversão de layout.
-- [ ] Casos numéricos: zeros, constantes, extremos de logits, NaN/Inf,
-  over/underflow, dimensões inválidas, dtype incompatível, padding e máscaras.
-- [ ] Casos de escala de atenção: tokens 64/128/224/1.370, múltiplas heads
-  e dimensão 64 por head, sem supor divisibilidade de tiles.
+### 2.0 — Inventário de dados [AUDITADO]
 
-### 2.B — Oráculo e comparação
-- [ ] Criar interface `ReferenceOracle` (Rust CPU / Hugging Face opcional).
-- [ ] Criar `CandidateExecutor` injetável (mock inicialmente), com
-  identificador de versão e indicação do backend realmente executado.
-- [ ] Comparar shape, dtype, finitude, `max_abs`, `relative_L2`, e
-  opcionalmente erro por token e por camada; tolerâncias pré-definidas.
-- [ ] Testes que falham intencionalmente ao alterar um valor, trocar dois
-  patches, ignorar CLS, alterar normalização ou provocar fallback.
+- [x] Localizar os **200 pares** RGB/`_mask.png` em
+  `ORCA_512x512/{training,testing}`, 100 pares em cada split.
+- [x] Confirmar em CI: **400 PNGs válidos**, RGB8 e grayscale8
+  de 512×512, com hashes, pareamento completo e nenhum conteúdo duplicado.
+- [x] Identificar **101 IDs de caso TCGA** pelos filenames,
+  51 training/50 testing, **sem overlap de IDs entre splits**.
+- [x] Verificar diretamente todos os pixels: **200 máscaras binárias
+  com intensidades 0 e 255**, diferentemente do ORCA original
+  descrito na literatura com três classes.
+- [x] Quantificar o risco do crop do pré-processamento V0:
+  **8,78% dos pixels 255 fora do crop central equivalente**,
+  59/200 máscaras com perda estimada superior a 10%.
+- [ ] Documentar a procedência da variante binária, significado
+  validado de 0/255, atribuição, condições de uso e redistribuição.
+- [ ] Congelar um manifest local de todos os pares com hash SHA-256,
+  caso TCGA, core, split e versão de pré-processamento.
 
-### 2.C — Geometria e espacialidade (imagens existentes)
-- [ ] Trabalhar **exclusivamente com o acervo de imagens já disponível**,
-  acessado por `DATA_DIR` fora do Git. Não criar imagens, tiles ou
-  máscaras independentes desse acervo.
-- [ ] Quando necessário, derivar tiles/crops, resize e variantes de teste
-  **a partir das imagens originais**, com coordenadas, parâmetros,
-  transformação e hash do arquivo de origem registrados.
-- [ ] Conferir transformação imagem original→tile→crop→patch→mapa CHW
-  e inversão, incluindo nível/escala e `micrometers_per_pixel` quando conhecido.
-- [ ] Utilizar máscaras de referência somente se já existirem anotações
-  correspondentes no acervo; transformar imagem e máscara juntas.
-  **Não inventar máscaras ou rótulos tumorais.**
-- [ ] Testar erros de coordenadas, layout e regiões fora do crop usando
-  as imagens reais derivadas. Testes de perda de lesão exigem anotação
-  real disponível; sem ela, testar somente geometria, não acurácia clínica.
+### 2.A — Manifest e catálogo de testes
 
-### 2.D — CI e relatórios mínimos
-- [ ] Rodar testes puros no GitHub Actions sem checkpoint nem GPU.
-- [ ] Manter a paridade V0 pesada em workflow opcional/reprodutível.
-- [ ] Gerar relatório JSON de cada caso com seed, forma, erro e status;
-  bloquear regressões reais de correção sem depender de timing instável.
+- [ ] Schema JSON versionado para `case_id`, `core_id`, `split`,
+  `image_path`, `mask_path`, `image_sha256`, `mask_sha256`,
+  `mask_values=[0,255]`, shape 512×512, seed, dtype/layout,
+  modelo, backend, tolerâncias e origem da anotação.
+- [ ] Parser read-only de imagens e máscaras, contrato de
+  pareamento e verificação de imagem/máscara trocadas ou ausentes.
+- [ ] Fixtures **numéricas** para GEMM, residual, softmax,
+  LayerNorm, GELU, QKV e atenção; testes NaN/Inf, shapes e padding.
+- [ ] Preservar os splits já enviados e bloquear mistura de cores
+  do mesmo caso TCGA entre treino e teste.
 
-**Gate da Fase 2:** inserir um algoritmo *mock* que (1) passa quando
-equivalente e (2) falha nos casos propositalmente corrompidos, inclusive
-perda de espacialidade. Nenhum algoritmo de pesquisa é implementado.
+### 2.B — Oráculo e comparador numérico
+
+- [ ] `ReferenceOracle` CPU (V0 e operações isoladas) e
+  `CandidateExecutor` mock, sem implementar um novo algoritmo.
+- [ ] Comparar shape, dtype, finitude, `max_abs`,
+  `relative_L2`, layout e ordens de CLS/patches; registrar seed e versão.
+- [ ] Testes negativos: valor perturbado, token permutado, NaN,
+  divergência além da tolerância e fallback GPU→CPU falso.
+
+### 2.C — Máscaras ORCA e registro espacial
+
+- [ ] Aplicar o perfil V0 **512→592→center crop 518**
+  à imagem e à máscara pareada, com CatmullRom para RGB
+  e **nearest-neighbor na máscara**, preservando 0/255.
+- [ ] Projetar a máscara transformada à grade **37×37**
+  de patches 14×14, computando fração de pixels 255 por patch
+  sem tratar CLS como patch e **sem inventar rótulos clínicos**.
+- [ ] Medir, reportar e testar **cobertura de anotação preservada
+  e perdida** em crop/resize; usar 8,78% como baseline
+  geométrico aproximado, não limite de aceite clínico.
+- [ ] Detectar trocas de pares, máscara deslocada, nova classe
+  de pixel por interpolação incorreta, grade transposta e
+  contaminação entre IDs de caso.
+- [ ] Limitar coordenadas à imagem TMA 512×512, marcando
+  WSI x/y, nível e µm/px como desconhecidos até confirmação.
+
+### 2.D — CI e resultados do harness
+
+- [x] Workflow independente de auditoria dos 400 PNGs
+  com relatório agregado e **sem publicar imagens**
+  ([evidência](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45269827098)).
+- [ ] Suíte CPU de contratos e corrupção controlada de
+  dados/máscaras existentes, sem dependência de GPU nem pesos.
+- [ ] Reporter JSON por caso com hashes, classes 0/255,
+  matriz de transformação, cobertura e motivo de falha.
+- [ ] Manter comparações pesadas do checkpoint V0 em CI separada.
+
+**Gate da Fase 2:** imagem e máscara pareadas do ORCA passam;
+máscara errada, geometria deslocada, classe inválida, split
+incompatível e valor numérico corrompido **falham**.
+O resultado é uma infraestrutura de testes, não um algoritmo de
+segmentação nem validação diagnóstica.
+
 
 ## Fase 3 — Adaptadores e injeção experimental [PLANEJADA]
 
@@ -179,27 +212,27 @@ integrar um modelo real diferente será trabalho experimental futuro.
 **Gate:** com duas funções sintéticas conhecidas, o harness detecta
 ganho/queda e rejeita dados de performance incompletos.
 
-## Fase 5 — Validação de metadados OSCC e geometria [PLANEJADA]
+## Fase 5 — Schemas de proveniência e integridade do acervo [PLANEJADA]
 
-- [ ] Schema **de metadados**, não ingestão de pacientes: paciente/slide,
-  aquisição, magnificação, `µm/px`, origem, coordenadas, rótulo disponível,
-  licença, hash e origem de anotação.
-- [ ] Validar metadados das **imagens existentes** com exemplos de
-  identificadores conflitantes, slides duplicados e vazamento de grupos;
-  casos negativos alteram registros e coordenadas, não geram novas imagens.
-- [ ] Testar grupos patient/slide-safe e registro espacial de patches
-  sobre imagens derivadas do acervo, preservando as coordenadas de origem.
-- [ ] Caso haja máscaras já fornecidas, testar seu alinhamento após
-  transformações; caso contrário, marcar testes de máscara como
-  `skipped: annotation_unavailable`, nunca fabricar ground truth.
-- [ ] Testar privacidade: arquivos originais/derivados, pesos e features
-  não podem ser commitados ou enviados como artefatos de CI.
-- [ ] Definir apenas contratos de métricas/relatórios para estudos futuros,
-  sem treinamento ou avaliação clínica nesta branch.
+- [ ] Completar a política de casos TCGA: dois cores de uma mesma
+  origem ficam no mesmo split; manter training/testing originais
+  e detectores de duplicatas ou derivados entre grupos.
+- [ ] Validar manifest da versão binária ORCA e origem do
+  rótulo 255, sem presumir equivalência com as três classes
+  descritas nos estudos do dataset original.
+- [ ] Definir metadata opcional WSI, nível, magnificação e
+  micrômetros por pixel: ausência = desconhecido, não inferido.
+- [ ] Verificar permissão de uso/redistribuição e atribuição
+  dos arquivos **já commitados no repositório público**;
+  registrar decisão sem mudar o dataset automaticamente.
+- [ ] Testar proveniência e transformações a partir das imagens
+  e máscaras existentes, sem gerar outras imagens/anotações.
+- [ ] Especificar apenas formatos e esquemas de métricas para
+  experimentos futuros, sem treinar modelos nem medir eficácia clínica.
 
-**Gate:** validações de metadados, transformações e proveniência passam
-com o acervo disponível; ausências de anotações são declaradas, não supridas
-com máscaras artificiais.
+**Gate:** provenance documentada, splits preservados, artefatos
+derivados identificáveis e nenhuma inferência física sem dados.
+
 
 ## Fase 6 — Registro e reprodutibilidade de experimentos [PLANEJADA]
 
