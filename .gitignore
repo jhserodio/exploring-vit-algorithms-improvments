@@ -8,3 +8,10 @@
 *.safetensors
 *.pt
 *.pth
+
+# Local reference validation may export normalized tensors derived from patient data.
+*.f32le
+*.parity.json
+.venv/
+__pycache__/
+*.pyc
