@@ -3,6 +3,7 @@
 //! This crate is standalone. The experimental NVIDIA CUDA Rust
 //! kernels live in a separate package to keep the CPU correctness gate portable.
 pub mod dinov2;
+pub mod operation_contract;
 pub mod preprocess;
 pub mod spatial;
 
