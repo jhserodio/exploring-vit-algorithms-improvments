@@ -28,10 +28,12 @@ nem de inferência do modelo completo. [Fase 1](PHASE1.md).
 
 ## Fase 2 — harness [PRÓXIMA]
 
-- [ ] Manifest/fixtures sintéticas versionadas por operação e tipo.
+- [ ] Manifest com origem/hash de imagens existentes e fixtures
+  **numéricas** versionadas para operações.
 - [ ] Interface baseline/candidate/mock e testes de erros deliberados.
 - [ ] Comparador `max_abs`, `relative_L2`, shape, dtype, spatial order.
-- [ ] Máscaras e geometrias sintéticas para detectar regressões.
+- [ ] Geometria de tiles/crops **derivados das imagens existentes**
+  e alinhamento de máscaras somente quando já anotadas.
 - [ ] Relatórios JSON e CI de testes sem GPU nem dados privados.
 
 [Detalhamento Fase 2](docs/phase2-test-harness.md).
@@ -40,7 +42,8 @@ nem de inferência do modelo completo. [Fase 1](PHASE1.md).
 
 - [ ] Adaptadores e interfaces mock de experimentos.
 - [ ] Benchmark A/B e instrumentação CPU/GPU.
-- [ ] Validação sintética de schemas espaciais/OSCC.
+- [ ] Validação de schemas e proveniência espacial do acervo existente,
+  sem fabricar imagens ou anotações.
 - [ ] Proveniência e relatórios reproduzíveis.
 - [ ] CLI/runbook e teste end-to-end da sandbox.
 

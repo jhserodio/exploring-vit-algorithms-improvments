@@ -25,7 +25,7 @@ uma comparação numérica não demonstra qualidade clínica.
 ```text
 Versioned Experiment Manifest / Seed / Model + Data Hash
                 │
-      Synthetic Fixture Registry
+      Existing-image source registry + numeric operator fixtures
                 │
     Reference Model / CPU Oracle  ─────────────┐
                 │                              │
@@ -122,13 +122,21 @@ sem precisar escrever o algoritmo. Detalhamento:
 - [ ] Testes que falham intencionalmente ao alterar um valor, trocar dois
   patches, ignorar CLS, alterar normalização ou provocar fallback.
 
-### 2.C — Geometria e espacialidade (dados sintéticos)
-- [ ] Gerar imagens/tiles e máscaras **sintéticas** com coordenadas
-  conhecidas; não acessar dados de pacientes para desenvolver o harness.
-- [ ] Conferir transformação imagem→crop→patch→mapa CHW e inversão;
-  registro por nível/escala com `micrometers_per_pixel` opcional.
-- [ ] Testar que o harness detecta perda de regiões marcadas após crop,
-  resize ou seleção de tokens, sem implementar o algoritmo de seleção.
+### 2.C — Geometria e espacialidade (imagens existentes)
+- [ ] Trabalhar **exclusivamente com o acervo de imagens já disponível**,
+  acessado por `DATA_DIR` fora do Git. Não criar imagens, tiles ou
+  máscaras independentes desse acervo.
+- [ ] Quando necessário, derivar tiles/crops, resize e variantes de teste
+  **a partir das imagens originais**, com coordenadas, parâmetros,
+  transformação e hash do arquivo de origem registrados.
+- [ ] Conferir transformação imagem original→tile→crop→patch→mapa CHW
+  e inversão, incluindo nível/escala e `micrometers_per_pixel` quando conhecido.
+- [ ] Utilizar máscaras de referência somente se já existirem anotações
+  correspondentes no acervo; transformar imagem e máscara juntas.
+  **Não inventar máscaras ou rótulos tumorais.**
+- [ ] Testar erros de coordenadas, layout e regiões fora do crop usando
+  as imagens reais derivadas. Testes de perda de lesão exigem anotação
+  real disponível; sem ela, testar somente geometria, não acurácia clínica.
 
 ### 2.D — CI e relatórios mínimos
 - [ ] Rodar testes puros no GitHub Actions sem checkpoint nem GPU.
@@ -176,17 +184,22 @@ ganho/queda e rejeita dados de performance incompletos.
 - [ ] Schema **de metadados**, não ingestão de pacientes: paciente/slide,
   aquisição, magnificação, `µm/px`, origem, coordenadas, rótulo disponível,
   licença, hash e origem de anotação.
-- [ ] Fixtures artificiais para conflito de IDs, slides duplicados,
-  partições com vazamento e máscaras desalinhadas.
-- [ ] Testes de grupos patient/slide-safe e registro espacial de patches
-  com coordenadas sintéticas.
-- [ ] Testar política de privacidade: dados, pesos e tensores derivados
-  não podem ser commitados como artefatos de CI.
-- [ ] Especificar apenas métricas/campos esperados para futuros estudos;
-  não treinar head, não usar anotações reais nesta branch.
+- [ ] Validar metadados das **imagens existentes** com exemplos de
+  identificadores conflitantes, slides duplicados e vazamento de grupos;
+  casos negativos alteram registros e coordenadas, não geram novas imagens.
+- [ ] Testar grupos patient/slide-safe e registro espacial de patches
+  sobre imagens derivadas do acervo, preservando as coordenadas de origem.
+- [ ] Caso haja máscaras já fornecidas, testar seu alinhamento após
+  transformações; caso contrário, marcar testes de máscara como
+  `skipped: annotation_unavailable`, nunca fabricar ground truth.
+- [ ] Testar privacidade: arquivos originais/derivados, pesos e features
+  não podem ser commitados ou enviados como artefatos de CI.
+- [ ] Definir apenas contratos de métricas/relatórios para estudos futuros,
+  sem treinamento ou avaliação clínica nesta branch.
 
-**Gate:** validadores detectam entradas sintéticas inválidas sem dados
-clínicos reais.
+**Gate:** validações de metadados, transformações e proveniência passam
+com o acervo disponível; ausências de anotações são declaradas, não supridas
+com máscaras artificiais.
 
 ## Fase 6 — Registro e reprodutibilidade de experimentos [PLANEJADA]
 
@@ -199,7 +212,8 @@ clínicos reais.
   instável não pode causar falso negativo no CI.
 - [ ] Guardar resultados negativos, OOM e exclusões com causa explícita.
 
-**Gate:** executar todo o pipeline sintético e reproduzir o mesmo relatório.
+**Gate:** repetir relatórios sobre os mesmos operadores numéricos e
+exemplos derivados do acervo, com hashes e transformações idênticos.
 
 ## Fase 7 — Prontidão da sandbox [PLANEJADA]
 

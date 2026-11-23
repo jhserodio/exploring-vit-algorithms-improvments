@@ -1,7 +1,10 @@
 # Fase 2 — Especificação detalhada do harness de testes
 
 **Status:** planejada. **Esta branch entrega o instrumento de medição,
-não a melhoria a ser medida.**
+não a melhoria a ser medida.** As **imagens de entrada vêm exclusivamente
+do acervo já existente** do projeto; tiles e versões de teste só podem
+ser derivados delas. Fixtures numéricas artificiais continuam permitidas
+para validar matemática de operadores, mas não imagens ou máscaras inventadas.
 
 ## Contrato de entrada
 
@@ -35,7 +38,7 @@ desenvolvimento da ferramenta.
 
 ## Tabela de fixtures obrigatórias
 
-| Grupo | Entrada sintética | Invariante |
+| Grupo | Entrada para teste | Invariante |
 | --- | --- | --- |
 | GEMM | Matriz identidade, matrizes retangulares, FP32 fracionário | `A × I = A`, shape e erro |
 | Residual | dois tensores variados e dimensões inválidas | soma e erro de contrato |
@@ -43,8 +46,8 @@ desenvolvimento da ferramenta.
 | LayerNorm | vetor constante, escala/bias, epsilon | média/variância, números finitos |
 | GELU | valores simétricos e extremos | saída do oráculo, tolerância |
 | Atenção | Q/K/V conhecidos, máscara/padding, várias heads | shape, softmax por linha, tokens |
-| Patch | RGB CHW sintético, crop não quadrado | ordenação, geometria |
-| DenseFeatures | CLS + patches 37×37, registers fictícios | CLS separado, CHW preservado |
+| Patch | RGB CHW extraído de imagem existente, crop não quadrado derivado | ordenação, geometria, origem |
+| DenseFeatures | CLS + patches 37×37, registers de teste no tensor | CLS separado, CHW preservado |
 | Falhas | troca de patches, perturbação de 1 valor, NaN/Inf | harness detecta a regressão |
 | Dispositivo | CPU/CUDA misturados, CUDA ausente | falha explícita, sem fallback |
 
@@ -65,14 +68,32 @@ os testes do baseline com outra entrada.
 
 ## Espacialidade e OSCC
 
-Os testes de geometria serão criados com imagens e máscaras
-**artificiais** e identificadores fictícios. Devem detectar: crop
-deslocado, patch invertido, register token confundido com patch,
-perda de área marcada, escala físico-espacial ausente e mistura de
-slides/pacientes em partitions sintéticas.
+As imagens para testes espaciais serão **somente as já existentes no
+acervo do projeto**, acessadas localmente por `DATA_DIR`. Qualquer
+tile, crop, redimensionamento ou variante de teste deve ser derivado
+de uma delas e registrar `source_image_sha256`, coordenadas e
+transformações. Não gerar imagens artificiais independentes.
 
-Não adicionar datasets reais, anotadores clínicos, treinamento,
-segmentadores ou classificadores de câncer nesta branch.
+Se houver máscaras ou anotações de referência no acervo, usá-las
+junto com suas imagens originais e aplicar exatamente as mesmas
+transformações geométricas. **Sem máscaras existentes, não criar
+ground truth falso:** validar apenas ordem de tokens, alinhamento
+geométrico e cobertura do crop. Marcar verificações que dependem
+de máscaras como indisponíveis, sem alegar localização de lesões.
+
+Os testes negativos podem adulterar **metadados, coordenadas ou
+ordem dos tokens** de uma amostra derivada para garantir que o
+harness rejeita essas situações; não alteram rótulos clínicos
+nem criam novas imagens. Devem detectar crop deslocado, patch
+invertido, register token confundido com patch, escala física
+ausente e sobreposição indevida de grupos patient/slide.
+
+Nenhuma imagem ou anotação privada deve entrar no repositório,
+nos logs de CI ou nos artefatos enviados ao GitHub. A CI pública
+testa os operadores e os contratos de metadados sem exigir
+acesso ao acervo. Os testes com imagens existentes rodam
+localmente ou em ambiente autorizado com acesso controlado.
+Esta branch não treina segmentadores ou classificadores.
 
 ## Testes negativos (gate de qualidade)
 
@@ -82,7 +103,9 @@ segmentadores ou classificadores de câncer nesta branch.
 4. Um candidato que produz NaN/Inf **falha**;
 5. Um candidato que usa CPU apesar de requisitar CUDA **falha**;
 6. Um caso sem hash/seed/shape obrigatório **falha**;
-7. Um caso com máscara e tile sintético desalinhados **falha**.
+7. Um caso derivado de imagem existente com transformação/posição
+   incoerente **falha**; se houver máscara anotada correspondente,
+   um desalinhamento imagem/máscara **também falha**.
 
 Se qualquer teste negativo passar silenciosamente, o harness não está
 pronto para experimentação e a Fase 2 permanece aberta.
@@ -129,7 +152,7 @@ a execução da Fase 2 fica dividida em cinco entregas verificáveis,
 | 2.1 Manifest e catálogo | `experiment.schema.json` + loader e fixtures | Rejeitar versão, shape, seed, hash ou backend inválidos |
 | 2.2 Oráculo e executor mock | `ReferenceOracle`, `CandidateExecutor`, identidade e mutações | Input imutável e execução determinística por seed |
 | 2.3 Comparador numérico | `Comparator` e tolerâncias versionadas | Igualdade passa; erro injetado, shape/dtype incorreto e NaN falham |
-| 2.4 Comparador espacial | Coordenadas e máscaras sintéticas; CLS/register separados | Detectar token trocado, deslocamento, crop que remove marcador e grade errada |
+| 2.4 Comparador espacial | Tiles/crops derivados do acervo, coordenadas e máscaras existentes quando disponíveis | Detectar token trocado, deslocamento e grade errada; cobertura de região anotada só com ground truth |
 | 2.5 Reporter + CI | JSON versionado, testes de contrato e workflow CPU | Fixture íntegra aprovada e cada caso negativo rejeitado |
 
 **Ordem bloqueante:** 2.1 → 2.2 → 2.3 → 2.4 → 2.5. A criação de
@@ -166,16 +189,21 @@ Cada execução mock deve produzir um JSON com:
 `failure_reason` e `git_sha`. O relatório de benchmark com
 latências e VRAM é de responsabilidade da Fase 4, não desta.
 
-**Prova final de aceitação:** em um workflow CPU, rodar a suíte
-positiva e os sete testes negativos listados acima; os testes
-negativos **passam somente quando a falha esperada é detectada**.
-Repetir a mesma seed e fixture deve produzir os mesmos campos
-determinísticos, ignorando apenas timestamps e IDs de execução.
+**Prova final de aceitação:** a CI CPU executa os testes de operações
+matemáticas e contratos de metadados, inclusive os negativos. Os testes
+espaciais dependentes de imagem usam exclusivamente arquivos existentes
+via `DATA_DIR` em ambiente autorizado. Os negativos **passam somente
+quando a falha esperada é detectada**. Repetir a mesma imagem, seed e
+transformação deve produzir os mesmos campos determinísticos,
+ignorando apenas timestamps e IDs de execução.
 
 ## Restrições de implementação
 
-Usar apenas fixtures públicas ou inteiramente sintéticas. Não baixar
-outros modelos, datasets ou imagens histopatológicas e não implementar
-kernels científicos nesta fase. `results/` e tensores derivados ficam
-ignorados pelo Git. Não comparar tempo de execução como gate da Fase 2:
-benchmarks pertencem à Fase 4.
+Usar **somente as imagens já disponíveis no acervo**, sem geração
+independente de imagens, tiles ou máscaras. Transformaçōes de imagens
+existentes devem preservar rastreabilidade de origem; apenas os testes
+numéricos podem usar vetores/matrizes artificiais. Não baixar novos
+datasets nem criar rótulos tumorais; não implementar kernels científicos
+nesta fase. `DATA_DIR`, `results/` e tensores derivados permanecem fora
+do Git. Não comparar tempo como gate da Fase 2: benchmarks pertencem
+à Fase 4.

@@ -5,7 +5,7 @@ otimizações algorítmicas em modelos visuais (ViT) com aplicação
 planejada em histopatologia de OSCC.
 
 **Escopo desta branch `feat/testing-background`:** ambiente,
-configuração, interfaces, fixtures sintéticas, validação numérica,
+configuração, interfaces, fixtures **numéricas** de teste, validação numérica,
 reprodutibilidade, benchmark e CI. **Não** desenvolver nesta branch
 novos algoritmos otimizados, treinamento de modelos, inferência
 clínica ou avaliação real de câncer.
@@ -21,8 +21,9 @@ clínica ou avaliação real de câncer.
   sem GPU e CI CPU. Rust 1.100.0 fixado em `rust-toolchain.toml`,
   imagens e workflows. [CI CPU](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561), [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586);
   preflight e Compose documentados em [PHASE1.md](PHASE1.md).
-- **Fase 2: planejada/detalhada.** Harness de fixtures sintéticas,
-  oráculos, comparadores, testes negativos e relatório JSON.
+- **Fase 2: planejada/detalhada.** Harness com vetores numéricos de
+  teste e **imagens do acervo existente**, oráculos, comparadores,
+  testes negativos e relatório JSON.
   [Especificação](docs/phase2-test-harness.md).
 
 `source-ready` e `sandbox-config-ready` não significam que
@@ -90,5 +91,9 @@ Para repetir localmente, consultar [PHASE0.md](PHASE0.md).
 [Harness de testes Fase 2](docs/phase2-test-harness.md) ·
 [Checklist operacional](test-checklist-roadmap.md).
 
-Dados de pacientes, pesos, features derivadas e relatórios
-sensíveis permanecem fora do Git, conforme `.gitignore`.
+O harness de imagens usa apenas o acervo já existente via `DATA_DIR`.
+Qualquer crop, tile, resize ou variante espacial deve ser derivado de
+um arquivo original, preservando hash e geometria. Máscaras de referência
+somente se já estiverem anotadas; não se criam rótulos tumorais fictícios.
+Dados, pesos, features derivadas e relatórios sensíveis permanecem
+fora do Git, conforme `.gitignore`.

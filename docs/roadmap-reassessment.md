@@ -11,9 +11,9 @@ dos algoritmos, aplicações clínicas e treinamento não são tarefas desta bra
 | Forward CUDA completo dos 12 blocos DINOv2 | Retirado; implementação futura |
 | Operadores otimizados de atenção/LayerNorm/MLP | Retirados; somente probes de toolchain aqui |
 | Conclusões científicas de speedup ou ganho de OSCC | Retiradas; criar apenas comparadores e relatórios |
-| Treino de head/classificador e máscaras de câncer | Retirados; testes sintéticos de schema e espacialidade |
+| Treino de head/classificador e geração de máscaras de câncer | Retirados; usar somente anotações já existentes, se disponíveis, para testar alinhamento |
 | Carregamento/treino de Hibou-B ou Phikon-v2 | Retirados; mock adapters e contratos aqui |
-| Auditoria/rotulagem de datasets reais de pacientes | Retirada; validadores e fixtures fictícias aqui |
+| Auditoria clínica e nova rotulagem de pacientes | Retiradas; validar apenas metadados do acervo e transformações derivadas |
 | Experimentos clínicos, avaliação de sensibilidade real | Retirados; métrica/schema de relatório apenas |
 | Agents e orquestradores autônomos | Fora do sandbox inicial |
 
@@ -22,8 +22,8 @@ dos algoritmos, aplicações clínicas e treinamento não são tarefas desta bra
 O baseline real DINOv2 Base em CPU (V0), necessário como oráculo;
 a pilha CUDA Rust e seu smoke (Fase 1); harness de testes
 (Fase 2); interfaces, adapters e mocks (Fase 3);
-benchmark/medições (Fase 4); schemas e geometrias sintéticas
-(Fase 5); reports/proveniência (Fase 6); runbook e
+benchmark/medições (Fase 4); schemas e geometrias derivados das
+imagens existentes (Fase 5); reports/proveniência (Fase 6); runbook e
 aceitação end-to-end da sandbox (Fase 7).
 
 ## Novo critério de Fase 1
@@ -54,3 +54,13 @@ algoritmo otimizado.
 [Roadmap revisado](../roadmap.md) ·
 [Fase 1](../PHASE1.md) ·
 [Fase 2 detalhada](phase2-test-harness.md)
+
+## Correção da origem das imagens (2026-11-23)
+
+O pesquisador **já possui as imagens** que alimentarão a sandbox. Não
+gerar imagens ou máscaras sintéticas independentes para validar o
+pipeline espacial. Todo tile, crop, resize e caso espacial deriva de
+uma imagem existente e registra sua origem. As máscaras, se necessárias,
+devem vir de anotações já disponíveis; quando não houver máscara,
+verificar geometria sem alegar localização tumoral. Matrizes numéricas
+artificiais permanecem válidas para testes isolados de operadores.
