@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     clang llvm-dev libopenblas-dev liblapack-dev \
  && rm -rf /var/lib/apt/lists/*
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
- && rustup component add rustfmt clippy
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.100.0 \
+ && rustup component add --toolchain 1.100.0 rustfmt clippy
 
 WORKDIR /workspace/motor_inferencia
 # CPU reference tests are the default; GPU prototype runs in vit-gpu service.

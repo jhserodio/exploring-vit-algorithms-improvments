@@ -16,6 +16,14 @@ class SandboxPreflightTest(unittest.TestCase):
             self.assertGreater(len(issues), 5)
             self.assertTrue(any("CUDA Rust Tile version" in problem for problem in issues))
 
+    def test_toolchains_are_pinned_for_both_containers(self):
+        import tomllib
+
+        toolchain = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())
+        self.assertEqual(toolchain["toolchain"]["channel"], "1.100.0")
+        self.assertIn("rust:1.100-bookworm", (ROOT / "Dockerfile.cpu").read_text())
+        self.assertIn("--default-toolchain 1.100.0", (ROOT / "Dockerfile").read_text())
+
     def test_cuda_dependency_and_container_must_be_explicit(self):
         cpu = (ROOT / "motor_inferencia/Cargo.toml").read_text()
         gpu = (ROOT / "cuda-kernels/Cargo.toml").read_text()

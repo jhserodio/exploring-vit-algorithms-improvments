@@ -13,6 +13,8 @@ import tomllib
 ROOT = Path(__file__).resolve().parent.parent
 
 REQUIRED = (
+    "rust-toolchain.toml",
+    "docs/phase2-test-harness.md",
     "motor_inferencia/Cargo.toml",
     "motor_inferencia/Cargo.lock",
     "motor_inferencia/src/operation_contract.rs",
@@ -50,10 +52,13 @@ def validate(root: Path) -> list[str]:
     try:
         cpu = tomllib.loads(read("motor_inferencia/Cargo.toml"))
         gpu = tomllib.loads(read("cuda-kernels/Cargo.toml"))
+        rust = tomllib.loads(read("rust-toolchain.toml"))
     except (ValueError, tomllib.TOMLDecodeError) as exc:
         errors.append(f"invalid Cargo manifest: {exc}")
         return errors
 
+    if rust.get("toolchain", {}).get("channel") != "1.100.0":
+        errors.append("sandbox Rust toolchain must be pinned to 1.100.0")
     if cpu.get("package", {}).get("edition") != "2024":
         errors.append("CPU crate must use Rust edition 2024")
     legacy_name = bytes((99, 97, 110, 100, 108, 101)).decode("ascii")
@@ -63,8 +68,10 @@ def validate(root: Path) -> list[str]:
         errors.append("CUDA Rust Tile version must be pinned at cutile =0.5.0")
     if "13.3.0-devel" not in read("Dockerfile"):
         errors.append("CUDA Dockerfile must pin the CUDA 13.3 development image")
-    if "FROM rust:" not in read("Dockerfile.cpu"):
-        errors.append("CPU image must use independent Rust image")
+    if "FROM rust:1.100-bookworm" not in read("Dockerfile.cpu"):
+        errors.append("CPU image must pin the matching Rust 1.100 toolchain")
+    if "--default-toolchain 1.100.0" not in read("Dockerfile"):
+        errors.append("CUDA image must pin the matching Rust 1.100 toolchain")
     compose = read("docker-compose.yml")
     for item in ("vit-cpu:", "vit-gpu:", "Dockerfile.cpu", "dockerfile: Dockerfile", 'profiles: ["gpu"]', "capabilities: [gpu]"):
         if item not in compose:
