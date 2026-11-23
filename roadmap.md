@@ -6,10 +6,9 @@ operations, and their effect on histopathological patterns of oral squamous cell
 carcinoma (OSCC).  
 **Hardware target:** RTX 5070 Ti (`sm_120`), Ryzen 7 7700X3D-class CPU
 (actual host details to confirm).  
-**Implementation decision (2026-11-23):** remove Candle from the new runtime;
-retain a Rust/ndarray CPU oracle and develop NVIDIA CUDA Rust Tile kernels
-(`cutile-rs`) on CUDA 13.3+. The historical Candle revision remains in Git
-history for comparison. **Do not claim that the full model runs on CUDA yet.**
+**Implementation decision (2026-11-23):** use a standalone Rust/ndarray CPU
+reference and NVIDIA CUDA Rust Tile kernels (`cutile-rs`) on CUDA 13.3+.
+The previous runtime implementation remains accessible in Git history. **Do not claim that the full model runs on CUDA yet.**
 
 The full model/operation source is intentionally under active refactor.
 A completed source-code checkbox does not imply model-to-reference parity,
@@ -65,9 +64,9 @@ not as a speculative full framework.
 
 ## 3. Implementation phases
 
-### Phase 0 — Candle-free reference and spatial feature contract [P0]
+### V0 — DINOv2 Base FP32 reference and spatial feature contract [P0]
 
-- [x] Remove Candle from the new Rust engine's Cargo manifest and source imports.
+- [x] Remove legacy neural-network runtime dependencies and source imports.
 - [x] Implement `DenseFeatures` for CLS, row-major patch tokens and CHW grid.
 - [x] Implement 518px CPU image preprocessing and crop/source geometry.
 - [x] Implement standalone FP32 CPU DINOv2 Base forward with original
@@ -86,7 +85,7 @@ features. Synthetic tests alone do not meet the gate.
 
 ### Phase 1 — Native CUDA Rust kernel path [P0]
 
-- [x] Add isolated `cuda-kernels` crate using NVIDIA `cutile-rs`, not Candle.
+- [x] Add isolated `cuda-kernels` crate using NVIDIA `cutile-rs`, independently of the CPU runtime.
 - [x] Implement model-agnostic FP32 residual-add Tile kernel over the
       DINOv2-sized `1370 × 768` logical hidden state (source-level).
 - [x] Provide dedicated CUDA 13.3 development container and GPU Compose probe.
@@ -225,7 +224,7 @@ on the RTX 5070 Ti, with numerical tolerances documented.
 ## 5. First implementation sprint (refactor)
 
 1. [x] R01 — introduce model-independent dense token output and geometry.
-2. [x] R02 — replace Candle references with independent Rust CPU implementation.
+2. [x] R02 — replace the previous runtime with an independent Rust CPU implementation.
 3. [x] R03 — add native CUDA Rust Tile residual operation probe.
 4. [x] R04 — prepare full-token PyTorch parity script.
 5. [ ] R05 — CPU CI verified on [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849); original-checkpoint parity remains open.
@@ -235,7 +234,7 @@ on the RTX 5070 Ti, with numerical tolerances documented.
 9. [ ] R09 — add Hibou-B adapter and independent conformance suite.
 10. [ ] R10 — run controlled ablation, OSCC quality and performance study.
 
-**Historical baseline:** Original Candle 0.11 implementation in
+**Historical baseline:** Previous inference implementation in
 [commit 7b16388](https://github.com/jhserodio/exploring-vit-algorithms-improvments/commit/7b16388f3675cc6af104fb4b2176eeb18bbff254);
 prior CPU CI reported eight tests passing. Those results **do not** establish
 the current CPU or GPU correctness after this migration.

@@ -1,4 +1,4 @@
-# Phase 0 — Candle-free Rust CPU reference + native CUDA Rust operation probe
+# V0 — DINOv2 Base FP32 reference and spatial feature validation
 
 **Current state:** architecture migration underway. Native CUDA model forward
 is deliberately **not yet implemented**. Do not conflate the CUDA kernel probe
@@ -16,7 +16,7 @@ cargo run -- --help
 
 The Rust reference uses `ndarray` for matrix operations, `safetensors` to
 load original DINOv2 Base FP32 weights, and `image` to decode/normalize RGB.
-Candle is not a dependency or a runtime fallback.
+The engine has no dependency on a neural-network runtime or implicit fallback.
 
 Output for the single-image 518x518 profile:
 
@@ -86,17 +86,19 @@ The `z` option relabels host files even when mounted read-only. Stage
 copies in dedicated research folders; do not mount protected patient
 storage or arbitrary system paths to be relabeled.
 
-## 6. Acceptance gates
+## 6. V0 acceptance gates
 
-- [x] No Candle dependency in the new Rust engine manifest.
-- [x] Standalone spatial representation with a deterministic CLS/patch/map contract and CPU tests implemented.
-- [x] Crop geometry and inverse mapping checks implemented.
-- [x] CUDA Rust residual-add kernel added in a separate package.
-- [x] Fresh CPU CI green for this migration: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849) (14 tests passed).
-- [ ] Original checkpoint full CPU inference passes independent CLS + patch parity.
-- [ ] CUDA Rust kernel executes successfully on the RTX 5070 Ti with environment recorded.
-- [ ] Full model native CUDA forward integrated with reusable operation interfaces.
-- [ ] Reference-versus-CUDA per-operation numerical tests on GPU pass.
-- [ ] Patient-/slide-safe dataset manifest and legitimate OSCC evaluation protocol exist.
+- [x] Standalone Rust CPU reference with no legacy tensor-framework dependency.
+- [x] CLS, spatial tokens and CHW feature map contract + synthetic tests.
+- [x] Crop/source geometry and round-trip tests.
+- [x] CPU unit/integration CI passes Rustfmt and Clippy.
+- [x] Automated original-checkpoint download, verification and full-token parity workflow added.
+- [ ] Real checkpoint loads and completes finite FP32 inference on CPU.
+- [ ] Identical-input reference parity passes for CLS, all 1,369 patches,
+      the full hidden state and the CHW spatial map; report tolerances and hashes.
+
+**V0 scope:** The CUDA Rust operation probe, full CUDA inference and
+reference-versus-GPU parity are **Phase 1** gates. Patient-level dataset manifests
+and OSCC labels are **Phase 2+** gates. They do not hold V0 open.
 
 Read [roadmap.md](roadmap.md) for the full staged refactoring plan.

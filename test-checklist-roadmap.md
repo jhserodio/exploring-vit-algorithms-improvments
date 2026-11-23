@@ -5,7 +5,7 @@ branch `feat/testing-background`.
 
 ## Implemented in source (not all validated)
 
-- [x] Remove Candle imports and dependencies from the new engine.
+- [x] Remove legacy neural-network runtime imports and dependencies from the new engine.
 - [x] Add `ModelAdapter` interface and model-independent `DenseFeatures` output.
 - [x] Preserve CLS, 1,369 ordered patches and [768,37,37] spatial map.
 - [x] Add patch indexing, shape and CHW transpose tests.
@@ -17,11 +17,11 @@ branch `feat/testing-background`.
 
 ## Open validation and research gates
 
-- [x] CI green for the no-Candle CPU implementation: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
+- [x] CI green for the standalone CPU implementation: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
 - [ ] Real weights load and full DINOv2 CPU forward produces finite features.
 - [ ] Full hidden-state parity with Hugging Face reference has passed.
 - [ ] CUDA Rust Tile operation probe passes on RTX 5070 Ti with CUDA 13.3+.
-- [ ] Full GPU DINOv2 forward implemented without Candle.
+- [ ] Full GPU DINOv2 forward implemented using native CUDA Rust.
 - [ ] Per-operation and full-model CPU/CUDA numerical comparisons pass.
 - [ ] WSI/tile geometry and patient-safe dataset manifests validated.
 - [ ] Histopathology backbone (e.g. Hibou-B) loads and matches its own reference.

@@ -3,8 +3,7 @@
 Research sandbox in **Rust**, focused on mathematically controlled, model-agnostic
 algorithm experiments for oral squamous cell carcinoma (OSCC) histopathology.
 
-**Current migration (2026-11-23):** [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849) passed (10 unit + 4 CLI tests, Rustfmt, Clippy, Python help). Candle has been removed from the executable
-code. There are now two explicitly separate paths:
+**Current migration (2026-11-23):** [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849) passed (10 unit + 4 CLI tests, Rustfmt, Clippy, Python help). The project now has a standalone Rust CPU reference and an isolated native CUDA Rust package. There are now two explicitly separate paths:
 
 1. **`motor_inferencia/`** — standalone Rust/ndarray DINOv2 Base **CPU numerical
    reference**, with original FP32 safetensors loading, full 12-block forward, and
@@ -15,7 +14,7 @@ code. There are now two explicitly separate paths:
    hidden-state size. Requires CUDA 13.3+, compatible NVIDIA driver and GPU.
    This is **not** a full DINOv2 CUDA inference engine yet.
 
-The previous Candle baseline remains accessible in Git history at
+The previous inference baseline remains accessible in Git history at
 [commit 7b16388](https://github.com/jhserodio/exploring-vit-algorithms-improvments/commit/7b16388f3675cc6af104fb4b2176eeb18bbff254),
 but is not a current runtime dependency.
 
