@@ -34,7 +34,7 @@ jobs:
           python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.9.1
           python -m pip install "numpy==2.2.6" "transformers==4.57.1" "huggingface_hub==0.36.0" "safetensors==0.6.2"
       - name: Download and pin the real official DINOv2 Base checkpoint
-        run: python scripts/fetch_dinov2_checkpoint.py --output models
+        run: python scripts/fetch_dinov2_checkpoint.py --output models --revision f9e44c814b77203eaa57a6bdbbd535f21ede1415
       - name: Build independent Rust CPU reference
         run: cargo build --release --manifest-path motor_inferencia/Cargo.toml --locked
       - name: "Compare original checkpoint: CLS, patches and CHW spatial map"
