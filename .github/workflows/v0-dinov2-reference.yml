@@ -37,7 +37,7 @@ jobs:
         run: python scripts/fetch_dinov2_checkpoint.py --output models
       - name: Build independent Rust CPU reference
         run: cargo build --release --manifest-path motor_inferencia/Cargo.toml --locked
-      - name: Compare original checkpoint: CLS, all patches and CHW spatial map
+      - name: "Compare original checkpoint: CLS, patches and CHW spatial map"
         run: |
           python scripts/compare_dinov2_reference.py \
             --image motor_inferencia/tests/fixtures/pixel_fixture.ppm \
