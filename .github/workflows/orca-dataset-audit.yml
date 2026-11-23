@@ -1,0 +1,29 @@
+name: ORCA existing-image dataset audit
+on:
+  push:
+    branches:
+      - feat/testing-background
+    paths:
+      - "ORCA_512x512/**"
+      - "scripts/audit_orca_dataset.py"
+      - ".github/workflows/orca-dataset-audit.yml"
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Audit original ORCA RGB/annotation PNG pairs (no generated masks)
+        run: python scripts/audit_orca_dataset.py --dataset ORCA_512x512 --output results/orca-audit.json --expected-pairs 200
+      - name: Publish aggregate, non-image audit metrics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: orca-dataset-aggregate-audit
+          path: results/orca-audit.json
+          retention-days: 30
+          if-no-files-found: warn
