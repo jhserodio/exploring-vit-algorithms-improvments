@@ -23,5 +23,7 @@ jobs:
         run: cargo test --no-default-features
       - name: CLI smoke
         run: cargo run --no-default-features -- --help
+      - name: Reference parity script help (no model weights required)
+        run: python3 ../scripts/compare_dinov2_reference.py --help
       - name: Clippy
         run: cargo clippy --all-targets --no-default-features -- -D warnings
