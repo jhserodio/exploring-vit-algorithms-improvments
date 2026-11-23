@@ -1,6 +1,6 @@
 # Phase 0 — reproducible baseline and GPU acceptance gates
 
-**Status (2026-11-23):** The CPU build, four unit tests, formatting, Clippy and CLI-help smoke passed in [GitHub Actions on 2026-10-08](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/37717374470). CUDA runtime, original checkpoint loading and numerical parity have **not** been verified on the RTX 5070 Ti. This project is research, not an OSCC diagnostic application.
+**Status (2026-11-23):** Eight Rust tests (4 unit + 4 CLI integration), formatting, Clippy and CLI checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799). CUDA runtime, original checkpoint loading and numerical parity have **not** been verified on the RTX 5070 Ti. This project is research, not an OSCC diagnostic application.
 
 ## Implemented
 
@@ -86,7 +86,7 @@ Record maximum absolute error, relative L2 error, model/checkpoint hashes and en
 - [x] CUDA 12.8.1 / `sm_120` is configured; no privileged container for ordinary execution.
 - [x] DINOv2 Base forward and checkpoint loader code is present.
 - [x] A specific GPU Compose run command and SELinux mount strategy are documented.
-- [ ] New commit passes CI.
+- [x] Eight Rust tests (4 unit + 4 CLI integration), formatting, Clippy and command-line checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799); further changes require their own CI run.
 - [ ] A real CPU checkpoint run produces finite `[1,768]` embeddings.
 - [ ] The RTX 5070 Ti CUDA run succeeds and environment is captured.
 - [ ] Independent, identical-input reference parity passes.

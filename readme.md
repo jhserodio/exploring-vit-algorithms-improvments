@@ -10,7 +10,7 @@
 
 The test framework is designed to be **model-agnostic**. DINOv2 Base is only the **first checkpoint**. The benchmarking system and its future task-specific metrics must not depend on it.
 
-> **Research status (2026-11-23):** Four CPU unit tests, format, Clippy and help-command smoke passed in [GitHub Actions](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/37717374470). DINOv2 Base inference **code** exists; original-checkpoint loading, RTX 5070 Ti execution and numerical reference parity remain **unverified**. This is not an OSCC diagnosis system.
+> **Research status (2026-11-23):** Eight Rust tests (4 unit + 4 CLI integration), format, Clippy and command-line checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799). DINOv2 Base inference **code** exists; original-checkpoint loading, RTX 5070 Ti execution and numerical reference parity remain **unverified**. This is not an OSCC diagnosis system.
 
 ## Hardware and execution
 
@@ -48,7 +48,7 @@ docker compose run --build --rm vit-cpu
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-The GPU service runs actual CUDA inference rather than CPU tests. Compose volumes use SELinux shared-label `:z`, which **relabels host paths**; see [PHASE0.md](PHASE0.md) before using sensitive datasets.
+The GPU service runs actual CUDA inference rather than CPU tests. To compare identical normalized input tensors with the original Hugging Face DINOv2 Base, see the optional `scripts/compare_dinov2_reference.py` tool described in [PHASE0.md](PHASE0.md). This tool is implemented but **real-checkpoint parity has not yet been validated**. Compose volumes use SELinux shared-label `:z`, which **relabels host paths**; see [PHASE0.md](PHASE0.md) before using sensitive datasets.
 
 This baseline intentionally uses **518 × 518** images to retain the model's original positional grid; it does not reproduce the default Hugging Face 224-pixel preprocessing. Output is a **CLS embedding `[1,768]`**, not a classification score. Do not treat a successful run as numerical equivalence until the independent reference-parity test passes.
 

@@ -5,7 +5,7 @@
 **Primary implementation:** Rust + Hugging Face Candle + CUDA  
 **Initial reference backbone:** `facebook/dinov2-base` (replaceable)  
 **Reference hardware:** NVIDIA RTX 5070 Ti (Blackwell, compute capability 12.0); AMD Ryzen 7 (exact CPU SKU to be confirmed)  
-**Status (2026-11-23):** Progress audited against the implementation and [successful CPU CI (2026-10-08)](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/37717374470). GPU and full model-reference parity remain unverified.
+**Status (2026-11-23):** Progress audited against code and [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799). GPU and full model-reference parity remain unverified.
 
 ## 1. Research purpose
 
@@ -122,7 +122,7 @@ The organization above is a **target layout**, not a requirement to create every
 
 ### Phase 0 — Restore a trustworthy runnable baseline **[P0]**
 
-**Current evidence:** Four CPU unit tests, formatting, Clippy and CLI smoke passed 2026-10-08; DINOv2 Base inference code exists; CUDA 12.8.1/`sm_120` configured but not executed on the RTX 5070 Ti. See [PHASE0.md](PHASE0.md).
+**Current evidence:** Four CPU unit tests, four CLI integration tests, formatting, Clippy and command-line smoke passed in CI on 2026-11-23; DINOv2 Base inference code exists; CUDA 12.8.1/`sm_120` configured but not executed on the RTX 5070 Ti. See [PHASE0.md](PHASE0.md).
 
 - [x] Fix Rust compile errors and return the preprocessed tensor with correct `Result<Tensor>` handling (CPU CI 2026-10-08).
 - [x] Replace dummy image generation with deterministic CPU fixtures and tests for shape, CHW order, dtype and known normalized pixel values.
@@ -130,7 +130,7 @@ The organization above is a **target layout**, not a requirement to create every
 - [x] Configure CUDA Toolkit 12.8.1 / `sm_120` and pin Candle submodule (configuration only).
 - [ ] Verify CUDA/driver/`cudarc` compatibility on the **physical RTX 5070 Ti** and record tested versions.
 - [x] Remove unnecessary privileged-container defaults for ordinary runs; keep profiling privileges separate if required.
-- [x] Add `cargo fmt`, `cargo clippy`, unit tests, CPU-only CI and CLI-help smoke (passed 2026-10-08).
+- [x] Add `cargo fmt`, `cargo clippy`, unit tests, CPU-only CI and CLI-help smoke (passed in CI on 2026-11-23 with 8 Rust tests).
 - [ ] Run actual CUDA model inference on the local GPU and record the result.
 - [x] Implement DINOv2 Base forward, checkpoint loader and runtime checks for shape/finiteness (implementation only).
 - [ ] Verify real-checkpoint forward output, shape, numerical finiteness and independent reference parity.
@@ -377,5 +377,5 @@ Work in this order; avoid creating the entire framework in advance.
 | 8. Scientific reporting | P2 | Planned |
 | 9. Optional Ollama/control plane | P2 | Planned |
 
-**Evidence policy:** A checked subtask indicates implementation or the stated CI evidence, not that the enclosing phase has passed its exit gate. The optional reference-parity script and additional CLI tests were introduced on 2026-11-23; they require successful CI and a separate real-checkpoint parity run before their results can be claimed. CUDA, checkpoint loading and medical-data experiments still require their own successful runs. [PHASE0.md](PHASE0.md) is the execution guide; [test-checklist-roadmap.md](test-checklist-roadmap.md) tracks near-term acceptance gates without copying this plan.
+**Evidence policy:** A checked subtask indicates implementation or the stated CI evidence, not that the enclosing phase has passed its exit gate. Eight Rust tests and the reference-runner help command passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799). The optional reference-parity script and additional CLI tests were introduced on 2026-11-23; they require successful CI and a separate real-checkpoint parity run before their results can be claimed. CUDA, checkpoint loading and medical-data experiments still require their own successful runs. [PHASE0.md](PHASE0.md) is the execution guide; [test-checklist-roadmap.md](test-checklist-roadmap.md) tracks near-term acceptance gates without copying this plan.
 

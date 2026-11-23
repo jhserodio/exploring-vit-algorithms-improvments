@@ -6,7 +6,7 @@ Last audited: **2026-11-23**. Target branch: `feat/testing-background`.
 
 ## Verified or implemented
 
-- [x] Four CPU unit tests plus Rust build, `cargo fmt`, `cargo clippy` and CLI help passed on [2026-10-08 GitHub Actions](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/37717374470).
+- [x] Four preprocessing/architecture unit tests, four CLI integration tests, formatting, Clippy and CLI checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799).
 - [x] DINOv2 Base model-specific forward and checkpoint loader code is present (not a proven real-checkpoint result).
 - [x] Preprocessing fixtures, tensor shape/CHW/dtype and pixel normalization checks are implemented.
 - [x] CUDA 12.8.1 / SM 120 **configured** in Docker; actual compatibility not verified.
@@ -16,7 +16,7 @@ Last audited: **2026-11-23**. Target branch: `feat/testing-background`.
 
 ## Open acceptance gates
 
-- [ ] Updated commit passes CPU GitHub Actions (including any new tests).
+- [x] Expanded 8-test CPU suite and optional Python parity-runner help check passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799) (model parity itself was not run).
 - [ ] Run actual DINOv2 checkpoint on CPU: output finite with shape `[1,768]`.
 - [ ] Run real checkpoint on the RTX 5070 Ti and save environment via `scripts/collect_env.sh`.
 - [ ] Independent, identical-normalized-input PyTorch versus Candle comparison passes declared tolerance.
