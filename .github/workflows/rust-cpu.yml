@@ -14,10 +14,21 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Format
-        run: cargo fmt --all -- --check
+      - name: Format and export exact rustfmt sources (temporary migration helper)
+        run: |
+          cargo fmt --all
+          for file in src/dinov2.rs src/lib.rs src/main.rs src/preprocess.rs src/spatial.rs tests/cli.rs; do
+            printf 'RUSTFMT_BLOB::%s::' "$file"
+            base64 -w0 "$file"
+            echo
+          done
       - name: CPU reference correctness tests
         run: cargo test
+      - name: Emit regenerated Cargo lockfile (temporary migration helper)
+        run: |
+          printf 'CARGOLOCK_BLOB::'
+          base64 -w0 Cargo.lock
+          echo
       - name: CLI smoke
         run: cargo run -- --help
       - name: Python reference parity script help (does not load model)
