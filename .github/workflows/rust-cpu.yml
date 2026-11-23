@@ -1,4 +1,4 @@
-name: Rust CPU correctness (Candle-free)
+name: Rust CPU reference and spatial checks
 on:
   push:
   pull_request:
@@ -14,6 +14,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Block stale runtime-framework names
+        run: python3 ../scripts/check_legacy_runtime_refs.py
       - name: Format
         run: cargo fmt --all -- --check
       - name: CPU reference correctness tests

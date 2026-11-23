@@ -3,7 +3,7 @@ name = "motor_inferencia"
 version = "0.2.0"
 edition = "2024"
 
-# Research reference is CPU-only, implemented in Rust without Candle.
+# FP32 numerical reference is CPU-only and implemented in standalone Rust.
 # GPU kernels are native CUDA Rust and live in ../cuda-kernels (CUDA 13.3+).
 [dependencies]
 anyhow = "1.0.86"

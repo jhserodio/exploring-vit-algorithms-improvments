@@ -77,7 +77,7 @@ fn main() -> Result<()> {
     let input = preprocess::open_and_preprocess(&image_path)?;
     println!("preprocessing profile: dinov2-base-native518-v1");
     println!("input shape: {:?}", input.shape);
-    println!("execution: Rust CPU reference (no Candle)");
+    println!("execution: standalone Rust FP32 CPU reference");
     let model = DinoV2Base::load(&weights_path)?;
     println!("model: {}", model.model_id());
     let dense = model.forward_features(&input)?;

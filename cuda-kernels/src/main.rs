@@ -1,5 +1,5 @@
 //! First model-independent GPU operation: exact FP32 residual tensor addition.
-//! Native CUDA Rust Tile / CUDA 13.3+, isolated from CPU CI and Candle.
+//! Native CUDA Rust Tile / CUDA 13.3+, isolated from the CPU reference.
 //! This is an operation conformance probe, NOT a DINOv2 GPU forward or OSCC result.
 use cutile::prelude::*;
 
