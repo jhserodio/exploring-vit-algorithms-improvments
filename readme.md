@@ -7,8 +7,7 @@ algorithm experiments for oral squamous cell carcinoma (OSCC) histopathology.
 
 1. **`motor_inferencia/`** — standalone Rust/ndarray DINOv2 Base **CPU numerical
    reference**, with original FP32 safetensors loading, full 12-block forward, and
-   both global and spatial features. This path must still pass real-checkpoint
-   reference parity; synthetic CI tests alone do not establish model equivalence.
+   both global and spatial features. This CPU baseline **passed full-checkpoint parity** for CLS, 1,369 patches and the spatial CHW map on [2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357); no OSCC diagnostic validity is implied.
 2. **`cuda-kernels/`** — NVIDIA CUDA Rust Tile (`cutile-rs`) operation experiment,
    starting with a model-independent FP32 residual add over a realistic ViT
    hidden-state size. Requires CUDA 13.3+, compatible NVIDIA driver and GPU.
@@ -62,7 +61,7 @@ python3 scripts/compare_dinov2_reference.py \
 ```
 
 This command requires optional Python dependencies `numpy`, `torch` and
-`transformers`. The comparison has not been demonstrated with real weights here.
+`transformers`. The independent full-token comparison **passed using real official weights** in [V0 CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357). For the pinned checkpoint digest, errors, synthetic input and reproducibility, see [V0 validation](docs/v0-validation.md).
 
 ## Run the first native CUDA Rust kernel
 

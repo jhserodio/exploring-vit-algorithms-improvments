@@ -1,8 +1,6 @@
 # V0 — DINOv2 Base FP32 reference and spatial feature validation
 
-**Current state:** architecture migration underway. Native CUDA model forward
-is deliberately **not yet implemented**. Do not conflate the CUDA kernel probe
-with real DINOv2 GPU inference.
+**V0 status: COMPLETE (2026-11-23).** The original model weights load successfully, and the independent PyTorch reference agrees with all 1,370 FP32 tokens and the spatial CHW map. [Pinned validation evidence](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357). The native CUDA forward is a separate Phase 1 milestone and is **not** yet implemented.
 
 ## 1. CPU reference
 
@@ -28,12 +26,13 @@ Output for the single-image 518x518 profile:
 
 No output is a cancer classifier, pixel mask or clinically validated result.
 
-## 2. Real checkpoint validation (open)
+## 2. Reproduce the validated original checkpoint
 
 ```bash
 mkdir -p models data results
-# After installing the Hugging Face CLI on the host:
-hf download facebook/dinov2-base model.safetensors config.json --local-dir ./models
+# After installing Python huggingface_hub:
+python3 scripts/fetch_dinov2_checkpoint.py --output models \\
+  --revision f9e44c814b77203eaa57a6bdbbd535f21ede1415
 # Stage a non-sensitive local image at data/example.png
 
 cargo run --release --manifest-path motor_inferencia/Cargo.toml -- \
@@ -93,9 +92,8 @@ storage or arbitrary system paths to be relabeled.
 - [x] Crop/source geometry and round-trip tests.
 - [x] CPU unit/integration CI passes Rustfmt and Clippy.
 - [x] Automated original-checkpoint download, verification and full-token parity workflow added.
-- [ ] Real checkpoint loads and completes finite FP32 inference on CPU.
-- [ ] Identical-input reference parity passes for CLS, all 1,369 patches,
-      the full hidden state and the CHW spatial map; report tolerances and hashes.
+- [x] Original checkpoint loads and completes finite FP32 inference on CPU — [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
+- [x] Identical-input FP32 parity passes for CLS, all 1,369 patches, the full hidden state and CHW map (maximum absolute error 0.0003071; tolerance 0.001), with recorded revision and hashes — [evidence](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
 
 **V0 scope:** The CUDA Rust operation probe, full CUDA inference and
 reference-versus-GPU parity are **Phase 1** gates. Patient-level dataset manifests

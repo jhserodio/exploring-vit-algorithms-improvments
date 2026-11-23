@@ -15,11 +15,11 @@ branch `feat/testing-background`.
 - [x] Extend Hugging Face parity script to check CLS and patch tokens.
 - [x] Separate CPU CI and local GPU kernel probe.
 
-## Open validation and research gates
+## V0 completed; open GPU, data and model-generalization gates
 
 - [x] CI green for the standalone CPU implementation: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
-- [ ] Real weights load and full DINOv2 CPU forward produces finite features.
-- [ ] Full hidden-state parity with Hugging Face reference has passed.
+- [x] Official DINOv2 Base weights load and the full FP32 CPU forward emits finite features — [pinned checkpoint CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
+- [x] CLS, 1,369 patches, complete hidden state and spatial-map parity passed with exact CHW ordering — [validation record](docs/v0-validation.md).
 - [ ] CUDA Rust Tile operation probe passes on RTX 5070 Ti with CUDA 13.3+.
 - [ ] Full GPU DINOv2 forward implemented using native CUDA Rust.
 - [ ] Per-operation and full-model CPU/CUDA numerical comparisons pass.

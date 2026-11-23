@@ -75,13 +75,10 @@ not as a speculative full framework.
       geometric mappings (test code implemented).
 - [x] Extend the independent HF parity harness to all 1,370 normalized tokens.
 - [x] New CPU CI (10 unit + 4 CLI tests, fmt, Clippy, Python help) passed on [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
-- [ ] Full original `facebook/dinov2-base` checkpoint CPU inference passes;
-      validate all model keys, shapes and finiteness.
-- [ ] Validate CLS **and all patch tokens** against the identical-input
-      Hugging Face reference, recording max absolute and relative L2 error.
+- [x] Full original `facebook/dinov2-base` checkpoint loaded and completed finite CPU inference: [pinned official checkpoint CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
+- [x] Validated CLS, all 1,369 patch tokens and the CHW spatial map against identical-input Hugging Face reference; max absolute error 3.071e-4 (limit 1e-3): [numerical evidence](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
 
-**Gate:** a verified original DINOv2 Base reference with reproducible dense
-features. Synthetic tests alone do not meet the gate.
+**V0 exit gate: PASSED (2026-11-23).** A real, revision-pinned official checkpoint was loaded and its full 1,370-token output was verified numerically against the Hugging Face implementation. Only the **test image** is synthetic; no clinical validation is claimed. See [V0 validation record](docs/v0-validation.md).
 
 ### Phase 1 — Native CUDA Rust kernel path [P0]
 
@@ -204,9 +201,9 @@ on the RTX 5070 Ti, with numerical tolerances documented.
 
 | Test | Gate | Current evidence |
 | --- | --- | --- |
-| SP-01 CLS old/new equality | Complete checkpoint | Unverified |
+| SP-01 CLS versus independent Hugging Face reference | Pinned full checkpoint | Verified — [V0 record](docs/v0-validation.md) |
 | SP-02 Spatial shape, patch order, CLS exclusion | CPU fixtures | Implemented |
-| SP-03 All-token Hugging Face parity | Full 1370x768 output | Tool implemented; not run |
+| SP-03 All-token Hugging Face + spatial CHW parity | Full 1370x768 output | Verified — [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357) |
 | SP-04 Geometry tile / crop / source mapping | CPU coordinate round-trip | Implemented |
 | SP-05 Mask-to-patch registration | Labeled masks | Planned |
 | SP-06 Patient/slide leakage | Dataset manifests | Planned |
@@ -227,7 +224,7 @@ on the RTX 5070 Ti, with numerical tolerances documented.
 2. [x] R02 — replace the previous runtime with an independent Rust CPU implementation.
 3. [x] R03 — add native CUDA Rust Tile residual operation probe.
 4. [x] R04 — prepare full-token PyTorch parity script.
-5. [ ] R05 — CPU CI verified on [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849); original-checkpoint parity remains open.
+5. [x] R05 — CPU CI and original-checkpoint parity verified; [14-test CPU CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472506) and [full spatial parity](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
 6. [ ] R06 — execute GPU operation probe on RTX 5070 Ti.
 7. [ ] R07 — implement full GPU attention and DINOv2 forward.
 8. [ ] R08 — audit OSCC patient/slide labels and spatial metadata.
