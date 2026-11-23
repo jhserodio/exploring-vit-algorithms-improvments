@@ -65,6 +65,7 @@ def decode_png(path: Path, pixel_counts: bool) -> dict:
     if len(raw_pixels) != height * (stride + 1):
         raise ValueError(f"unexpected decompressed scanline length: {path}")
     hist = Counter()
+    retained_white_approx = 0
     previous = bytearray(stride)
     for row in range(height):
         start = row * (stride + 1)
@@ -89,6 +90,12 @@ def decode_png(path: Path, pixel_counts: bool) -> dict:
                     predictor = left if da <= db and da <= dc else up if db <= dc else upper_left
                     scanline[x] = (scanline[x] + predictor) & 255
             hist.update(scanline)
+            # The current V0 model resizes 512 -> 592 then center-crops 518.
+            # On the original 512 grid this keeps approximately [32,480)^2.
+            # This is an alignment-risk estimate, NOT model inference or
+            # exact nearest-neighbor resampling of a mask.
+            if 32 <= row < 480:
+                retained_white_approx += scanline[32:480].count(255)
         elif method in (2, 3, 4):
             # Image decoding is not required here: only PNG integrity and shape.
             pass
@@ -96,7 +103,8 @@ def decode_png(path: Path, pixel_counts: bool) -> dict:
     return {
         "width": width, "height": height, "depth": depth,
         "color_type": color, "sha256": sha256(raw).hexdigest(),
-        "pixel_counts": hist
+        "pixel_counts": hist,
+        "retained_white_approx": retained_white_approx,
     }
 
 
@@ -110,6 +118,9 @@ def main() -> int:
     split_summaries = {}
     global_colors = Counter()
     present_in_masks = Counter()
+    retained_white = 0
+    masks_with_white_lost = 0
+    masks_with_gt10pct_white_lost = 0
     all_case_sets = {}
     all_image_hashes = set()
     all_mask_hashes = set()
@@ -153,6 +164,13 @@ def main() -> int:
             cases[case_match.group()] += 1
             slides.add(name.rsplit("_", 1)[0])
             per_split_colors.update(mask_meta["pixel_counts"])
+            white = mask_meta["pixel_counts"].get(255, 0)
+            keep = mask_meta["retained_white_approx"]
+            retained_white += keep
+            if white > keep:
+                masks_with_white_lost += 1
+            if white and (white - keep) / white > 0.1:
+                masks_with_gt10pct_white_lost += 1
             for color in mask_meta["pixel_counts"]:
                 present_in_masks[str(color)] += 1
             pairs_total += 1
@@ -183,6 +201,18 @@ def main() -> int:
         "cross_split_case_overlap_count": len(overlap),
         "mask_pixel_values": {str(c): n for c, n in sorted(global_colors.items())},
         "masks_containing_each_value": dict(sorted(present_in_masks.items(), key=lambda item: int(item[0]))),
+        "approx_v0_center_crop": {
+            "source_image_pixels": 512,
+            "resize_short_side": 592,
+            "center_crop_pixels": 518,
+            "approx_source_pixel_box": [32, 32, 480, 480],
+            "white_pixels_retained_in_box": retained_white,
+            "white_pixels_outside_box": global_colors[255] - retained_white,
+            "white_fraction_retained": round(retained_white / global_colors[255], 8) if global_colors[255] else None,
+            "masks_with_any_white_outside_box": masks_with_white_lost,
+            "masks_with_over_10pct_white_outside_box": masks_with_gt10pct_white_lost,
+            "warning": "Approximate source-pixel coverage only; actual mask must use the identical geometry with nearest-neighbor resizing.",
+        },
         "splits": split_summaries,
         "errors": errors,
         "passed": not errors,
