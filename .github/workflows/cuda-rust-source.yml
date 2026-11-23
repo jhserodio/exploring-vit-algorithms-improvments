@@ -17,6 +17,9 @@ jobs:
     env:
       CUDA_TOOLKIT_PATH: /usr/local/cuda
       CUDA_HOME: /usr/local/cuda
+      HOME: /root
+      CARGO_HOME: /root/.cargo
+      RUSTUP_HOME: /root/.rustup
     steps:
       - uses: actions/checkout@v4
       - name: Install build prerequisites
