@@ -1,0 +1,56 @@
+name: V0 DINOv2 real-checkpoint CPU and spatial parity
+
+on:
+  push:
+    branches:
+      - feat/testing-background
+    paths:
+      - "motor_inferencia/**"
+      - "scripts/compare_dinov2_reference.py"
+      - "scripts/fetch_dinov2_checkpoint.py"
+      - ".github/workflows/v0-dinov2-reference.yml"
+  workflow_dispatch:
+
+jobs:
+  cpu-checkpoint-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "4"
+      RAYON_NUM_THREADS: "4"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_ETAG_TIMEOUT: "60"
+      HF_HUB_DOWNLOAD_TIMEOUT: "120"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install CPU-only PyTorch and reference dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.9.1
+          python -m pip install "numpy==2.2.6" "transformers==4.57.1" "huggingface_hub==0.36.0" "safetensors==0.6.2"
+      - name: Download and pin the real official DINOv2 Base checkpoint
+        run: python scripts/fetch_dinov2_checkpoint.py --output models
+      - name: Build independent Rust CPU reference
+        run: cargo build --release --manifest-path motor_inferencia/Cargo.toml --locked
+      - name: Compare original checkpoint: CLS, all patches and CHW spatial map
+        run: |
+          python scripts/compare_dinov2_reference.py \
+            --image motor_inferencia/tests/fixtures/pixel_fixture.ppm \
+            --model-dir models --device cpu \
+            --output-prefix results/reference/v0-dinov2 \
+            --atol 0.001 --rtol 0.001
+      - name: Publish only numerical metrics and checkpoint metadata
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v0-reference-parity-metadata
+          path: |
+            models/checkpoint-source.json
+            results/reference/*.parity.json
+          retention-days: 14
+          if-no-files-found: warn
