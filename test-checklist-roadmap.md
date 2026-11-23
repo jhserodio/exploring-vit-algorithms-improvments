@@ -10,15 +10,17 @@ benchmarks e interfaces; não implementa algoritmos de pesquisa.
 - [x] Paridade Hugging Face dos 1.370 tokens, valores e layout CHW:
   [evidência](docs/v0-validation.md).
 
-## Fase 1 — ambiente/configuração [CONFIGURADA]
+## Fase 1 — ambiente/configuração [CONCLUÍDA]
 
-- [x] Imagens CPU/GPU, perfis Compose e lockfiles separados.
+- [x] Imagens CPU/GPU, perfis Compose e lockfiles separados;
+  Rust 1.100.0 fixado e build de imagem CPU integrado à CI.
 - [x] Kernel smoke sources de residual, softmax e GEMM para verificar CUDA Rust.
 - [x] CUDA 13.3 `cargo check --locked` em CI independente de GPU.
 - [x] Contratos CPU de tensor/device + 17 testes Rust.
 - [x] Preflight offline, testes de configuração e sintaxe shell.
 - [x] Scripts para registrar ambiente e GPU local sem fallback.
 - [x] Proteção de dados em `.gitignore`, documentação dos containers.
+- [x] Evidências: [CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405) e [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007).
 
 **Verificação externa ainda pendente:** rodar os probes na RTX 5070 Ti
 e guardar os resultados. Não é evidência de algoritmo otimizado

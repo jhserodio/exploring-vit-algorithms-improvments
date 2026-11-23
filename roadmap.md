@@ -59,7 +59,7 @@ dataset, pré-processamento e hardware não forem controlados.
 **Evidência:** [docs/v0-validation.md](docs/v0-validation.md).
 É uma referência matematicamente comparável, não um sistema de diagnóstico.
 
-## Fase 1 — Provisionamento Rust / CUDA e smoke tests da sandbox [CONFIGURADA]
+## Fase 1 — Provisionamento Rust / CUDA e smoke tests da sandbox [CONCLUÍDA]
 
 **Objetivo:** disponibilizar dois ambientes isolados e reproduzíveis, com
 comandos de build, checagem do projeto e testes de infraestrutura.
@@ -69,13 +69,15 @@ algorítmica.** Ver [PHASE1.md](PHASE1.md) e
 
 - [x] Separar imagens `Dockerfile.cpu` (Rust CPU) e `Dockerfile`
   (CUDA 13.3 + Rust), mantendo Compose com perfis independentes.
-- [x] Fixar o `cutile` GPU, dependências Rust/CPU e `Cargo.lock` por crate.
+- [x] Fixar o `cutile` GPU, os `Cargo.lock` e a toolchain Rust **1.100.0**
+  em configuração central, Docker e workflows.
 - [x] Oferecer contratos de shape, dtype, layout e device para os operadores
   a serem comparados, com rejeição explícita de fallback GPU→CPU.
 - [x] Adicionar kernels **smoke/fixture** (residual, softmax, GEMM) para
   testar toolchain; não são alterações de algoritmo de pesquisa.
-- [x] Instalar CI de compilação/typecheck CUDA sem GPU, CI CPU com tests,
-  Rustfmt, Clippy, CLI e verificação de referências obsoletas.
+- [x] Instalar CI CUDA-source sem GPU e CI CPU com testes, Rustfmt,
+  Clippy, CLI, `--locked`, verificação de referências obsoletas e
+  build automático da imagem CPU.
 - [x] Adicionar script de preflight offline, testes automáticos de configuração,
   verificação de sintaxe Bash e validação da configuração Docker Compose.
 - [x] Disponibilizar script local para verificar e registrar GPU, driver,
@@ -83,7 +85,10 @@ algorítmica.** Ver [PHASE1.md](PHASE1.md) e
 - [x] Documentar env `DATA_DIR`, `MODEL_DIR`, SELinux Fedora, comandos de
   execução e a distinção entre `source-ready` e `gpu-verified`.
 
-**Critério de encerramento da Fase 1:** CI CPU e CUDA-source passam;
+**Encerramento da Fase 1:** validação confirmada na
+[CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405) e na [CI CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007); os novos
+testes de versionamento e build do Docker estão incorporados à CI.
+**Critério de aceite:** CI CPU e CUDA-source passam;
 `sandbox_preflight.py` e `docker compose config` passam sem GPU;
 ambientes e scripts locais estão documentados. **O teste da RTX 5070 Ti
 continua pendente como validação de hardware do futuro executor, não como

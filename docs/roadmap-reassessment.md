@@ -28,7 +28,7 @@ aceitação end-to-end da sandbox (Fase 7).
 
 ## Novo critério de Fase 1
 
-**Configuração pronta** significa CI, manifests travados,
+**Configuração pronta e Fase 1 encerrada** significa CI, manifests travados,
 Dockerfiles, Compose, scripts de preflight e smoke e documentação
 válidos. Não equivale a ter executado a RTX 5070 Ti.
 O GPU smoke local continua necessário antes do primeiro experimento

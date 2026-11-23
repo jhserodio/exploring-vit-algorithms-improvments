@@ -116,3 +116,66 @@ de contrato em CI.
 
 A Fase 2 termina com uma **plataforma de testes**, e não com
 uma otimização algorítmica pronta.
+
+
+## Sequência de implementação e evidências exigidas
+
+Para evitar construir a ferramenta de benchmarking antes do comparador,
+a execução da Fase 2 fica dividida em cinco entregas verificáveis,
+**todas de infraestrutura**:
+
+| Entrega | Artefato esperado | Teste de aceite |
+| --- | --- | --- |
+| 2.1 Manifest e catálogo | `experiment.schema.json` + loader e fixtures | Rejeitar versão, shape, seed, hash ou backend inválidos |
+| 2.2 Oráculo e executor mock | `ReferenceOracle`, `CandidateExecutor`, identidade e mutações | Input imutável e execução determinística por seed |
+| 2.3 Comparador numérico | `Comparator` e tolerâncias versionadas | Igualdade passa; erro injetado, shape/dtype incorreto e NaN falham |
+| 2.4 Comparador espacial | Coordenadas e máscaras sintéticas; CLS/register separados | Detectar token trocado, deslocamento, crop que remove marcador e grade errada |
+| 2.5 Reporter + CI | JSON versionado, testes de contrato e workflow CPU | Fixture íntegra aprovada e cada caso negativo rejeitado |
+
+**Ordem bloqueante:** 2.1 → 2.2 → 2.3 → 2.4 → 2.5. A criação de
+uma otimização real ou de um novo modelo **não** é exigida.
+
+### Contrato numérico do comparador
+
+- Validar `shape`, `dtype`, `layout`, comprimento, identificador do
+  backend realmente utilizado, finitude e ordem dos tokens **antes**
+  de calcular erros; uma falha de estrutura não pode ser mascarada
+  por tolerância generosa.
+- Para valores finitos, definir
+  `max_abs = max(abs(candidate[i] - reference[i]))` e
+  `relative_L2 = ||candidate - reference||₂ / max(||reference||₂, 1e-12)`.
+  `max_abs` e `relative_L2` precisam satisfazer seus limites.
+- NaN/Inf devem ter política explícita definida no manifest: rejeitar
+  por padrão; exceções só para testes negativos que esperem rejeição.
+  O comparador não pode reportar `passed=true` com erro não finito.
+- A mesma fixture de entrada, seed e metadados devem ser entregues
+  ao baseline e ao mock. Testar erro claro ao declarar CUDA e executar
+  em CPU, sem fallback automático.
+- A comparação espacial precisa preservar índice do CLS,
+  `[row,col,channel]` e inversão de coordenadas do crop. Uma
+  permutação de patches pode conservar estatísticas agregadas e
+  ainda assim **deve falhar**.
+
+### Estrutura de relatório esperada
+
+Cada execução mock deve produzir um JSON com:
+`schema_version`, `run_id`, `case_id`, `seed`,
+`fixture_sha256`, `baseline_revision`, `candidate_revision`,
+`requested_device`, `actual_device`, `shape`, `dtype`,
+`max_abs`, `relative_L2`, `tolerance`, `passed`,
+`failure_reason` e `git_sha`. O relatório de benchmark com
+latências e VRAM é de responsabilidade da Fase 4, não desta.
+
+**Prova final de aceitação:** em um workflow CPU, rodar a suíte
+positiva e os sete testes negativos listados acima; os testes
+negativos **passam somente quando a falha esperada é detectada**.
+Repetir a mesma seed e fixture deve produzir os mesmos campos
+determinísticos, ignorando apenas timestamps e IDs de execução.
+
+## Restrições de implementação
+
+Usar apenas fixtures públicas ou inteiramente sintéticas. Não baixar
+outros modelos, datasets ou imagens histopatológicas e não implementar
+kernels científicos nesta fase. `results/` e tensores derivados ficam
+ignorados pelo Git. Não comparar tempo de execução como gate da Fase 2:
+benchmarks pertencem à Fase 4.

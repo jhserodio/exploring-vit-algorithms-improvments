@@ -15,10 +15,12 @@ clínica ou avaliação real de câncer.
 - **V0: concluída.** Referência Rust/CPU do DINOv2 Base com CLS
   e grid 37×37 validada contra checkpoint oficial fixado:
   [relatório](docs/v0-validation.md).
-- **Fase 1: ambiente configurado.** Rust CPU e CUDA Rust em
+- **Fase 1: ambiente configurado e encerrado.** Rust CPU e CUDA Rust em
   containers separados, dependências fixadas, contratos e
   probes de soma residual, softmax e GEMM; CI de compilação CUDA
-  sem GPU e CI CPU. Preflight e Compose documentados em [PHASE1.md](PHASE1.md).
+  sem GPU e CI CPU. Rust 1.100.0 fixado em `rust-toolchain.toml`,
+  imagens e workflows. [CI CPU](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405), [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007);
+  preflight e Compose documentados em [PHASE1.md](PHASE1.md).
 - **Fase 2: planejada/detalhada.** Harness de fixtures sintéticas,
   oráculos, comparadores, testes negativos e relatório JSON.
   [Especificação](docs/phase2-test-harness.md).

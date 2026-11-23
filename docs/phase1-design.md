@@ -1,5 +1,10 @@
 # Fase 1 — Critérios técnicos de provisionamento da sandbox
 
+**Status:** CONFIGURAÇÃO CONCLUÍDA — [CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405)
+e [CI CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007) aprovadas, com revisão de toolchain fixa
+Rust 1.100.0. A execução dos probes na RTX 5070 Ti é validação operacional
+separada, a realizar no computador do projeto.
+
 **Objetivo exclusivo:** preparar Rust, CUDA, containers, smoke tests, CI,
 contratos e preflight para receber novos experimentos posteriormente.
 A Fase 1 **não** contém implementação de algoritmos científicos nem
@@ -10,10 +15,10 @@ exige executar o DINOv2 completo na GPU.
 | Gate | Critério | Evidência |
 | --- | --- | --- |
 | E1 | CPU e GPU em containers separados | `Dockerfile.cpu`, `Dockerfile`, Compose |
-| E2 | CUDA Rust fixado, compilação reprodutível | `cuda-kernels/Cargo.toml` + `Cargo.lock`; source CI |
+| E2 | Toolchain e dependências fixas | `rust-toolchain.toml` (1.100.0), dois `Cargo.lock`, [source CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007) |
 | E3 | Contratos independentes do modelo | `operation_contract.rs`, unit tests |
 | E4 | Probes de smoke residual/softmax/GEMM | `cuda-kernels/src/main.rs`; compilação CUDA |
-| E5 | Preflight e Compose configuráveis sem GPU | Python preflight/test, `docker compose config` |
+| E5 | Preflight e Compose configuráveis sem GPU | Python preflight/test, `docker compose config`, build de imagem CPU na CI |
 | E6 | Diagnóstico na GPU real pronto | `scripts/v1-gpu-acceptance.sh` e `collect_env.sh` |
 | E7 | Guardrails de privacidade e documentação | `.gitignore`, README, roadmap |
 
@@ -38,7 +43,7 @@ fase. Não inserir em CI falsos resultados de GPU ou resultados clínicos.
 ```text
 Fedora host / RTX 5070 Ti (sm_120)
 │
-├── CPU: rust:1.90-bookworm
+├── CPU: rust:1.100-bookworm
 │   ├── reference DINOv2 Base (V0)
 │   ├── shape/dtype/device contracts
 │   └── CI unit/integration + preflight

@@ -1,21 +1,28 @@
 # Fase 1 — Sandbox Rust/CUDA: ambiente e testes de infraestrutura
 
-**Status: configuração concluída (2026-11-23).** Esta fase prepara o
+**Status: CONCLUÍDA como configuração de sandbox (2026-11-23).** Esta fase prepara o
 ambiente e os smoke tests; **não implementa algoritmos de pesquisa nem
 inferência CUDA completa do DINOv2**.
+
+**Evidência prévia:** [17 testes Rust, 3 testes Python, Compose e preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405);
+[CUDA 13.3, `cutile` e `cargo check --locked`](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007).
+A versão de Rust está fixada em `rust-toolchain.toml` (1.100.0) e
+validada por testes de configuração. O runtime CUDA real permanece
+com a marca de validação local pendente.
 
 ## Entregas de provisionamento
 
 - [x] Containers independentes: Rust CPU e CUDA 13.3 + Rust GPU.
 - [x] Docker Compose com serviço CPU padrão e perfil explícito `gpu`.
-- [x] Cargo manifests e lockfiles distintos, `cutile = "=0.5.0"`.
+- [x] Cargo manifests e lockfiles distintos, `cutile = "=0.5.0"`,
+  toolchain Rust 1.100.0 fixada em ambos os containers e na CI.
 - [x] Contratos de operações com validação de shape, dtype, layout, device
   e erro explícito quando CUDA não está disponível.
 - [x] Kernels sintéticos de *smoke testing*: residual, softmax e GEMM;
   não são melhorias algorítmicas e não substituem um modelo neural.
 - [x] CI CPU e CUDA-source (formatação, testes e compilação).
-- [x] Preflight offline, testes de configuração, sintaxe Bash e
-  validação Docker Compose integrados à CI.
+- [x] Preflight offline, testes de configuração, sintaxe Bash,
+  build da imagem CPU e validação Docker Compose integrados à CI.
 - [x] Script local para verificação da GPU real e coleta de evidências
   (driver, toolkit, GPU, Rust, Git SHA, resultados).
 
