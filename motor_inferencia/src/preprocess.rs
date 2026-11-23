@@ -24,25 +24,32 @@ impl CropGeometry {
     /// Approximate source-image center corresponding to processed pixel center.
     pub fn processed_to_source(&self, x: f64, y: f64) -> (f64, f64) {
         let sx = ((x + self.crop_left as f64 + 0.5) * self.original_width as f64
-            / self.resized_width as f64) - 0.5;
+            / self.resized_width as f64)
+            - 0.5;
         let sy = ((y + self.crop_top as f64 + 0.5) * self.original_height as f64
-            / self.resized_height as f64) - 0.5;
+            / self.resized_height as f64)
+            - 0.5;
         (sx, sy)
     }
 
     pub fn source_to_processed(&self, x: f64, y: f64) -> (f64, f64) {
         let px = ((x + 0.5) * self.resized_width as f64 / self.original_width as f64)
-            - 0.5 - self.crop_left as f64;
+            - 0.5
+            - self.crop_left as f64;
         let py = ((y + 0.5) * self.resized_height as f64 / self.original_height as f64)
-            - 0.5 - self.crop_top as f64;
+            - 0.5
+            - self.crop_top as f64;
         (px, py)
     }
 
     /// Center of a spatial token in the decoded source image.
     pub fn patch_center(&self, row: usize, col: usize, patch: usize) -> Result<(f64, f64)> {
         ensure!(patch > 0, "zero-size patch");
-        ensure!((col + 1) * patch <= self.output_size as usize
-             && (row + 1) * patch <= self.output_size as usize, "patch outside crop");
+        ensure!(
+            (col + 1) * patch <= self.output_size as usize
+                && (row + 1) * patch <= self.output_size as usize,
+            "patch outside crop"
+        );
         let x = col as f64 * patch as f64 + (patch as f64 - 1.0) / 2.0;
         let y = row as f64 * patch as f64 + (patch as f64 - 1.0) / 2.0;
         Ok(self.processed_to_source(x, y))
@@ -66,7 +73,10 @@ pub fn preprocess(image: &DynamicImage) -> Result<ImageTensor> {
     let resized_width = ((width as f64 * scale).round() as u32).max(INPUT_SIZE);
     let resized_height = ((height as f64 * scale).round() as u32).max(INPUT_SIZE);
     let resized = imageops::resize(
-        &rgb, resized_width, resized_height, imageops::FilterType::CatmullRom,
+        &rgb,
+        resized_width,
+        resized_height,
+        imageops::FilterType::CatmullRom,
     );
     let left = (resized_width - INPUT_SIZE) / 2;
     let top = (resized_height - INPUT_SIZE) / 2;
@@ -84,9 +94,13 @@ pub fn preprocess(image: &DynamicImage) -> Result<ImageTensor> {
         shape: [1, 3, INPUT_SIZE as usize, INPUT_SIZE as usize],
         values,
         geometry: CropGeometry {
-            original_width: width, original_height: height,
-            resized_width, resized_height,
-            crop_left: left, crop_top: top, output_size: INPUT_SIZE,
+            original_width: width,
+            original_height: height,
+            resized_width,
+            resized_height,
+            crop_left: left,
+            crop_top: top,
+            output_size: INPUT_SIZE,
         },
     })
 }
@@ -110,7 +124,10 @@ mod tests {
             (1.0 - MEAN[0]) / STD[0],
             (0.0 - MEAN[1]) / STD[1],
             (128.0 / 255.0 - MEAN[2]) / STD[2],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for pos in [0, 16 * 518 + 16, 517 * 518 + 517] {
                 assert!((input.values[channel * plane + pos] - expected).abs() < 1e-5);
             }

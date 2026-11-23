@@ -4,11 +4,11 @@
 //! token retention over CPU throughput. The dedicated NVIDIA CUDA Rust crate
 //! implements GPU operations independently; full CUDA forward is a later gate.
 //! Model: facebook/dinov2-base, original FP32 safetensors, 518px native grid.
+use crate::{ModelAdapter, preprocess::ImageTensor, spatial::DenseFeatures};
 use anyhow::{Context, Result, bail, ensure};
 use ndarray::{Array2, Axis, s};
 use safetensors::{Dtype, SafeTensors};
 use std::{fs, path::Path};
-use crate::{ModelAdapter, preprocess::ImageTensor, spatial::DenseFeatures};
 
 pub const HIDDEN: usize = 768;
 pub const HEADS: usize = 12;
@@ -21,14 +21,28 @@ pub const PATCHES: usize = GRID * GRID;
 pub const TOKENS: usize = PATCHES + 1;
 
 fn tensor(st: &SafeTensors<'_>, name: &str, shape: &[usize]) -> Result<Vec<f32>> {
-    let t = st.tensor(name).with_context(|| format!("missing checkpoint tensor {name}"))?;
-    ensure!(t.shape() == shape, "tensor {name}: expected {shape:?}, got {:?}", t.shape());
-    ensure!(t.dtype() == Dtype::F32, "tensor {name}: FP32 required; got {:?}", t.dtype());
+    let t = st
+        .tensor(name)
+        .with_context(|| format!("missing checkpoint tensor {name}"))?;
+    ensure!(
+        t.shape() == shape,
+        "tensor {name}: expected {shape:?}, got {:?}",
+        t.shape()
+    );
+    ensure!(
+        t.dtype() == Dtype::F32,
+        "tensor {name}: FP32 required; got {:?}",
+        t.dtype()
+    );
     let data = t.data();
-    ensure!(data.len() == shape.iter().product::<usize>() * 4, "bad byte length for {name}");
-    Ok(data.chunks_exact(4).map(|bytes| {
-        f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
-    }).collect())
+    ensure!(
+        data.len() == shape.iter().product::<usize>() * 4,
+        "bad byte length for {name}"
+    );
+    Ok(data
+        .chunks(4)
+        .map(|bytes| f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+        .collect())
 }
 
 #[derive(Debug)]
@@ -40,11 +54,17 @@ impl Linear {
     fn load(st: &SafeTensors<'_>, prefix: &str, output: usize, input: usize) -> Result<Self> {
         let weight = tensor(st, &format!("{prefix}.weight"), &[output, input])?;
         let bias = tensor(st, &format!("{prefix}.bias"), &[output])?;
-        Ok(Self { weight: Array2::from_shape_vec((output, input), weight)?, bias })
+        Ok(Self {
+            weight: Array2::from_shape_vec((output, input), weight)?,
+            bias,
+        })
     }
 
     fn forward(&self, input: &Array2<f32>) -> Result<Array2<f32>> {
-        ensure!(input.ncols() == self.weight.ncols(), "linear input feature dimension mismatch");
+        ensure!(
+            input.ncols() == self.weight.ncols(),
+            "linear input feature dimension mismatch"
+        );
         let mut out = input.dot(&self.weight.t());
         for mut row in out.axis_iter_mut(Axis(0)) {
             for (value, bias) in row.iter_mut().zip(&self.bias) {
@@ -69,7 +89,10 @@ impl LayerNorm {
     }
 
     fn forward(&self, input: &Array2<f32>) -> Result<Array2<f32>> {
-        ensure!(input.ncols() == self.weight.len(), "LayerNorm shape mismatch");
+        ensure!(
+            input.ncols() == self.weight.len(),
+            "LayerNorm shape mismatch"
+        );
         let mut out = input.to_owned();
         for mut row in out.axis_iter_mut(Axis(0)) {
             let mean = row.iter().copied().sum::<f32>() / row.len() as f32;
@@ -97,7 +120,12 @@ impl Attention {
             query: Linear::load(st, &format!("{a}.query"), HIDDEN, HIDDEN)?,
             key: Linear::load(st, &format!("{a}.key"), HIDDEN, HIDDEN)?,
             value: Linear::load(st, &format!("{a}.value"), HIDDEN, HIDDEN)?,
-            output: Linear::load(st, &format!("{prefix}.attention.output.dense"), HIDDEN, HIDDEN)?,
+            output: Linear::load(
+                st,
+                &format!("{prefix}.attention.output.dense"),
+                HIDDEN,
+                HIDDEN,
+            )?,
         })
     }
 
@@ -127,11 +155,16 @@ impl Attention {
 fn softmax_in_place(scores: &mut Array2<f32>) {
     for mut row in scores.axis_iter_mut(Axis(0)) {
         let maximum = row.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-        let sum: f32 = row.iter_mut().map(|v| {
-            *v = (*v - maximum).exp();
-            *v
-        }).sum();
-        for v in &mut row { *v /= sum; }
+        let sum: f32 = row
+            .iter_mut()
+            .map(|v| {
+                *v = (*v - maximum).exp();
+                *v
+            })
+            .sum();
+        for v in &mut row {
+            *v /= sum;
+        }
     }
 }
 
@@ -146,8 +179,14 @@ struct EncoderBlock {
     gamma2: Vec<f32>,
 }
 fn add_scaled(base: &mut Array2<f32>, candidate: &Array2<f32>, gamma: &[f32]) -> Result<()> {
-    ensure!(base.dim() == candidate.dim() && base.ncols() == gamma.len(), "residual shape mismatch");
-    for (mut left, right) in base.axis_iter_mut(Axis(0)).zip(candidate.axis_iter(Axis(0))) {
+    ensure!(
+        base.dim() == candidate.dim() && base.ncols() == gamma.len(),
+        "residual shape mismatch"
+    );
+    for (mut left, right) in base
+        .axis_iter_mut(Axis(0))
+        .zip(candidate.axis_iter(Axis(0)))
+    {
         for ((a, b), g) in left.iter_mut().zip(right.iter()).zip(gamma) {
             *a += b * g;
         }
@@ -191,12 +230,18 @@ pub struct DinoV2Base {
 
 impl DinoV2Base {
     pub fn load(weights: &Path) -> Result<Self> {
-        ensure!(weights.is_file(), "weights not found: {}", weights.display());
+        ensure!(
+            weights.is_file(),
+            "weights not found: {}",
+            weights.display()
+        );
         let data = fs::read(weights).with_context(|| format!("reading {}", weights.display()))?;
         let st = SafeTensors::deserialize(&data).context("invalid safetensors checkpoint")?;
         let projection_name = "embeddings.patch_embeddings.projection";
         let patch_weights = tensor(
-            &st, &format!("{projection_name}.weight"), &[HIDDEN, 3, PATCH, PATCH],
+            &st,
+            &format!("{projection_name}.weight"),
+            &[HIDDEN, 3, PATCH, PATCH],
         )?;
         let patch_bias = tensor(&st, &format!("{projection_name}.bias"), &[HIDDEN])?;
         let cls_token = tensor(&st, "embeddings.cls_token", &[1, 1, HIDDEN])?;
@@ -222,8 +267,14 @@ impl DinoV2Base {
 
     /// Expand image CHW into rows of channel-major [3,14,14] patches.
     fn patchify(input: &ImageTensor) -> Result<Array2<f32>> {
-        ensure!(input.shape == [1, 3, IMAGE, IMAGE], "DINOv2 Base expects [1,3,518,518]");
-        ensure!(input.values.len() == 3 * IMAGE * IMAGE, "malformed image tensor");
+        ensure!(
+            input.shape == [1, 3, IMAGE, IMAGE],
+            "DINOv2 Base expects [1,3,518,518]"
+        );
+        ensure!(
+            input.values.len() == 3 * IMAGE * IMAGE,
+            "malformed image tensor"
+        );
         let mut patches = Array2::<f32>::zeros((PATCHES, 3 * PATCH * PATCH));
         for row in 0..GRID {
             for col in 0..GRID {
@@ -232,7 +283,9 @@ impl DinoV2Base {
                     for dy in 0..PATCH {
                         for dx in 0..PATCH {
                             let src = channel * IMAGE * IMAGE
-                                + (row * PATCH + dy) * IMAGE + col * PATCH + dx;
+                                + (row * PATCH + dy) * IMAGE
+                                + col * PATCH
+                                + dx;
                             let dst = channel * PATCH * PATCH + dy * PATCH + dx;
                             patches[(p, dst)] = input.values[src];
                         }
@@ -247,7 +300,9 @@ impl DinoV2Base {
         let patches = Self::patchify(input)?;
         let projected = self.patch_projection.forward(&patches)?;
         let mut hidden = Array2::<f32>::zeros((TOKENS, HIDDEN));
-        for c in 0..HIDDEN { hidden[(0, c)] = self.cls_token[c]; }
+        for c in 0..HIDDEN {
+            hidden[(0, c)] = self.cls_token[c];
+        }
         hidden.slice_mut(s![1.., ..]).assign(&projected);
         hidden += &self.position_embeddings;
         for block in &self.blocks {
@@ -262,7 +317,9 @@ impl DinoV2Base {
 }
 
 impl ModelAdapter for DinoV2Base {
-    fn model_id(&self) -> &'static str { "facebook/dinov2-base" }
+    fn model_id(&self) -> &'static str {
+        "facebook/dinov2-base"
+    }
     fn forward_features(&self, input: &ImageTensor) -> Result<DenseFeatures> {
         self.forward_dense(input)
     }

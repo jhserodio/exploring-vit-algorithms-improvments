@@ -18,23 +18,43 @@ pub struct DenseFeatures {
 
 impl DenseFeatures {
     /// Input tokens must be ordered [CLS, row-major patches], with no registers.
-    pub fn from_hidden(hidden: &Array2<f32>, grid_height: usize, grid_width: usize) -> Result<Self> {
+    pub fn from_hidden(
+        hidden: &Array2<f32>,
+        grid_height: usize,
+        grid_width: usize,
+    ) -> Result<Self> {
         ensure!(grid_height > 0 && grid_width > 0, "empty spatial grid");
-        let patches = grid_height.checked_mul(grid_width)
+        let patches = grid_height
+            .checked_mul(grid_width)
             .ok_or_else(|| anyhow::anyhow!("spatial grid overflow"))?;
-        ensure!(hidden.nrows() == patches + 1, "expected CLS plus {patches} patches, got {}", hidden.nrows());
+        ensure!(
+            hidden.nrows() == patches + 1,
+            "expected CLS plus {patches} patches, got {}",
+            hidden.nrows()
+        );
         ensure!(hidden.ncols() > 0, "empty feature dimension");
         let dim = hidden.ncols();
         let cls = hidden.row(0).to_vec();
-        let patch_tokens: Vec<f32> = hidden.rows().into_iter().skip(1)
-            .flat_map(|row| row.to_vec()).collect();
+        let patch_tokens: Vec<f32> = hidden
+            .rows()
+            .into_iter()
+            .skip(1)
+            .flat_map(|row| row.to_vec())
+            .collect();
         let mut spatial_map = vec![0.0; patches * dim];
         for patch in 0..patches {
             for channel in 0..dim {
                 spatial_map[channel * patches + patch] = patch_tokens[patch * dim + channel];
             }
         }
-        Ok(Self { cls, patch_tokens, spatial_map, grid_height, grid_width, hidden_dim: dim })
+        Ok(Self {
+            cls,
+            patch_tokens,
+            spatial_map,
+            grid_height,
+            grid_width,
+            hidden_dim: dim,
+        })
     }
 
     pub fn hidden_state_row_major(&self) -> Vec<f32> {
@@ -45,9 +65,12 @@ impl DenseFeatures {
     }
 
     pub fn cell(&self, row: usize, col: usize, channel: usize) -> Result<f32> {
-        ensure!(row < self.grid_height && col < self.grid_width && channel < self.hidden_dim,
-            "feature index out of bounds");
-        Ok(self.spatial_map[channel * self.grid_height * self.grid_width + row * self.grid_width + col])
+        ensure!(
+            row < self.grid_height && col < self.grid_width && channel < self.hidden_dim,
+            "feature index out of bounds"
+        );
+        Ok(self.spatial_map
+            [channel * self.grid_height * self.grid_width + row * self.grid_width + col])
     }
 }
 
@@ -61,15 +84,26 @@ mod tests {
         // CLS followed by 2x2 patch tokens, 3 channels each.
         let x = array![
             [100., 101., 102.],
-            [1., 2., 3.], [4., 5., 6.],
-            [7., 8., 9.], [10., 11., 12.]
+            [1., 2., 3.],
+            [4., 5., 6.],
+            [7., 8., 9.],
+            [10., 11., 12.]
         ];
         let dense = DenseFeatures::from_hidden(&x, 2, 2)?;
         assert_eq!(dense.cls, vec![100., 101., 102.]);
-        assert_eq!(dense.patch_tokens, vec![1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,11.,12.]);
-        assert_eq!(dense.spatial_map, vec![1.,4.,7.,10.,2.,5.,8.,11.,3.,6.,9.,12.]);
+        assert_eq!(
+            dense.patch_tokens,
+            vec![1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.]
+        );
+        assert_eq!(
+            dense.spatial_map,
+            vec![1., 4., 7., 10., 2., 5., 8., 11., 3., 6., 9., 12.]
+        );
         assert_eq!(dense.cell(1, 0, 2)?, 9.0);
-        assert_eq!(dense.hidden_state_row_major(), x.iter().copied().collect::<Vec<_>>());
+        assert_eq!(
+            dense.hidden_state_row_major(),
+            x.iter().copied().collect::<Vec<_>>()
+        );
         Ok(())
     }
 

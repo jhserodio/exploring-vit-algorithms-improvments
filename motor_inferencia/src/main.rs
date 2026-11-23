@@ -39,10 +39,20 @@ fn main() -> Result<()> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--image" => image = Some(PathBuf::from(args.next().context("--image requires path")?)),
-            "--weights" => weights = Some(PathBuf::from(args.next().context("--weights requires path")?)),
-            "--export-prefix" => export_prefix = Some(PathBuf::from(args.next().context("--export-prefix requires path")?)),
+            "--weights" => {
+                weights = Some(PathBuf::from(
+                    args.next().context("--weights requires path")?,
+                ))
+            }
+            "--export-prefix" => {
+                export_prefix = Some(PathBuf::from(
+                    args.next().context("--export-prefix requires path")?,
+                ))
+            }
             "--cpu" | "--cuda" => {
-                if device.is_some() { bail!("choose exactly one device"); }
+                if device.is_some() {
+                    bail!("choose exactly one device");
+                }
                 device = Some(if arg == "--cpu" { "cpu" } else { "cuda" });
             }
             "--help" | "-h" => {
@@ -73,19 +83,33 @@ fn main() -> Result<()> {
     let dense = model.forward_features(&input)?;
     println!(
         "CLS: [1,{}]; patches: [1,{},{}]; grid: [1,{},{},{}]",
-        dense.hidden_dim, dense.grid_height * dense.grid_width,
-        dense.hidden_dim, dense.hidden_dim,
-        dense.grid_height, dense.grid_width
+        dense.hidden_dim,
+        dense.grid_height * dense.grid_width,
+        dense.hidden_dim,
+        dense.hidden_dim,
+        dense.grid_height,
+        dense.grid_width
     );
     if let Some(prefix) = export_prefix {
         let root = prefix.to_string_lossy();
         write_f32_le(&PathBuf::from(format!("{root}.input.f32le")), &input.values)?;
-        write_f32_le(&PathBuf::from(format!("{root}.embedding.f32le")), &dense.cls)?;
-        write_f32_le(&PathBuf::from(format!("{root}.hidden.f32le")), &dense.hidden_state_row_major())?;
-        write_f32_le(&PathBuf::from(format!("{root}.spatial.f32le")), &dense.spatial_map)?;
+        write_f32_le(
+            &PathBuf::from(format!("{root}.embedding.f32le")),
+            &dense.cls,
+        )?;
+        write_f32_le(
+            &PathBuf::from(format!("{root}.hidden.f32le")),
+            &dense.hidden_state_row_major(),
+        )?;
+        write_f32_le(
+            &PathBuf::from(format!("{root}.spatial.f32le")),
+            &dense.spatial_map,
+        )?;
         println!("exported tensor fixtures for independent parity validation");
     }
     println!("CLS first 8 values: {:?}", &dense.cls[..8]);
-    println!("Research status: checkpoint reference parity and native CUDA GPU forward are pending.");
+    println!(
+        "Research status: checkpoint reference parity and native CUDA GPU forward are pending."
+    );
     Ok(())
 }

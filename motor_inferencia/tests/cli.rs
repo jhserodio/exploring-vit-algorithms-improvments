@@ -33,7 +33,13 @@ fn contradictory_device_flags_are_rejected() {
 
 #[test]
 fn cuda_full_forward_is_explicitly_unavailable_not_silent_cpu() {
-    let r = invoke(&["--image", "x.png", "--weights", "weights.safetensors", "--cuda"]);
+    let r = invoke(&[
+        "--image",
+        "x.png",
+        "--weights",
+        "weights.safetensors",
+        "--cuda",
+    ]);
     assert!(!r.status.success());
     let msg = String::from_utf8_lossy(&r.stderr);
     assert!(msg.contains("native CUDA Rust full-model inference is not implemented yet"));
