@@ -4,8 +4,8 @@
 ambiente e os smoke tests; **não implementa algoritmos de pesquisa nem
 inferência CUDA completa do DINOv2**.
 
-**Evidência prévia:** [17 testes Rust, 3 testes Python, Compose e preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405);
-[CUDA 13.3, `cutile` e `cargo check --locked`](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007).
+**Evidência prévia:** [17 testes Rust, 4 testes Python, Compose, preflight e build Docker CPU](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561);
+[CUDA 13.3, `cutile` e `cargo check --locked`](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586).
 A versão de Rust está fixada em `rust-toolchain.toml` (1.100.0) e
 validada por testes de configuração. O runtime CUDA real permanece
 com a marca de validação local pendente.

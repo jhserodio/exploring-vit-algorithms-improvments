@@ -1,7 +1,7 @@
 # Fase 1 — Critérios técnicos de provisionamento da sandbox
 
-**Status:** CONFIGURAÇÃO CONCLUÍDA — [CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405)
-e [CI CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007) aprovadas, com revisão de toolchain fixa
+**Status:** CONFIGURAÇÃO CONCLUÍDA — [CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561)
+e [CI CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586) aprovadas, com revisão de toolchain fixa
 Rust 1.100.0. A execução dos probes na RTX 5070 Ti é validação operacional
 separada, a realizar no computador do projeto.
 
@@ -15,7 +15,7 @@ exige executar o DINOv2 completo na GPU.
 | Gate | Critério | Evidência |
 | --- | --- | --- |
 | E1 | CPU e GPU em containers separados | `Dockerfile.cpu`, `Dockerfile`, Compose |
-| E2 | Toolchain e dependências fixas | `rust-toolchain.toml` (1.100.0), dois `Cargo.lock`, [source CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007) |
+| E2 | Toolchain e dependências fixas | `rust-toolchain.toml` (1.100.0), dois `Cargo.lock`, [source CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586) |
 | E3 | Contratos independentes do modelo | `operation_contract.rs`, unit tests |
 | E4 | Probes de smoke residual/softmax/GEMM | `cuda-kernels/src/main.rs`; compilação CUDA |
 | E5 | Preflight e Compose configuráveis sem GPU | Python preflight/test, `docker compose config`, build de imagem CPU na CI |

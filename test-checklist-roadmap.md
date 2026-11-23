@@ -20,7 +20,7 @@ benchmarks e interfaces; não implementa algoritmos de pesquisa.
 - [x] Preflight offline, testes de configuração e sintaxe shell.
 - [x] Scripts para registrar ambiente e GPU local sem fallback.
 - [x] Proteção de dados em `.gitignore`, documentação dos containers.
-- [x] Evidências: [CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405) e [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007).
+- [x] Evidências: [CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561) e [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586).
 
 **Verificação externa ainda pendente:** rodar os probes na RTX 5070 Ti
 e guardar os resultados. Não é evidência de algoritmo otimizado

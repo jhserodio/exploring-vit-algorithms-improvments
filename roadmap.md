@@ -86,7 +86,7 @@ algorítmica.** Ver [PHASE1.md](PHASE1.md) e
   execução e a distinção entre `source-ready` e `gpu-verified`.
 
 **Encerramento da Fase 1:** validação confirmada na
-[CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405) e na [CI CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007); os novos
+[CI CPU/preflight](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561) e na [CI CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586); os novos
 testes de versionamento e build do Docker estão incorporados à CI.
 **Critério de aceite:** CI CPU e CUDA-source passam;
 `sandbox_preflight.py` e `docker compose config` passam sem GPU;
@@ -215,15 +215,6 @@ clínicos reais.
 
 **Gate:** um novo experimento consegue conectar um algoritmo futuro ao
 harness e obter erros, métricas e benchmark sem reconfigurar o ambiente.
-
-## Fora desta branch
-
-Forward DINOv2 completo em CUDA, novos kernels de otimização, mudança de
-atenção, pruning de tokens, treinamento de classificadores, adaptação de
-Hibou-B/Phikon-v2 reais, inspeção de imagens de pacientes, inferência
-diagnóstica, experimentos clínicos, análises de resultados científicos ou
-comprovação de ganho de desempenho. **Esses itens foram retirados do
-roadmap de sandbox e serão planejados em branches de implementação.**
 
 ## Evidências e estados
 

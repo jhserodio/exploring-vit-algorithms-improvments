@@ -19,7 +19,7 @@ clínica ou avaliação real de câncer.
   containers separados, dependências fixadas, contratos e
   probes de soma residual, softmax e GEMM; CI de compilação CUDA
   sem GPU e CI CPU. Rust 1.100.0 fixado em `rust-toolchain.toml`,
-  imagens e workflows. [CI CPU](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45252056405), [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250739007);
+  imagens e workflows. [CI CPU](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400561), [CUDA-source](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45262400586);
   preflight e Compose documentados em [PHASE1.md](PHASE1.md).
 - **Fase 2: planejada/detalhada.** Harness de fixtures sintéticas,
   oráculos, comparadores, testes negativos e relatório JSON.

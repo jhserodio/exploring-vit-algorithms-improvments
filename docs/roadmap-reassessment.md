@@ -36,8 +36,9 @@ GPU; não deve bloquear a conclusão da **configuração de sandbox**.
 
 ## Fase 2 exigia mais detalhe?
 
-**Sim.** Foi expandida em quatro blocos: catálogo/fixtures,
-oráculo-comparação, espacialidade sintética e CI/report. Um
+**Sim.** Foi expandida em quatro eixos de trabalho (fixtures,
+oráculo/comparação, espacialidade e CI/report) e cinco entregas
+sequenciadas com testes de aceite independentes (2.1–2.5). Um
 harness só pode ser considerado pronto se detectar erros
 injetados deliberadamente: valores modificados, patches trocados,
 falhas de device e dados mal formatados.
