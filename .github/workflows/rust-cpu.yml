@@ -1,5 +1,4 @@
-name: Rust CPU correctness
-
+name: Rust CPU correctness (Candle-free)
 on:
   push:
   pull_request:
@@ -12,18 +11,16 @@ jobs:
         working-directory: motor_inferencia
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - name: Format
         run: cargo fmt --all -- --check
-      - name: CPU tests
-        run: cargo test --no-default-features
+      - name: CPU reference correctness tests
+        run: cargo test
       - name: CLI smoke
-        run: cargo run --no-default-features -- --help
-      - name: Reference parity script help (no model weights required)
+        run: cargo run -- --help
+      - name: Python reference parity script help (does not load model)
         run: python3 ../scripts/compare_dinov2_reference.py --help
       - name: Clippy
-        run: cargo clippy --all-targets --no-default-features -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings

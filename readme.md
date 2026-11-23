@@ -1,83 +1,109 @@
-# ViT Research Engine — OSCC Pattern Recognition and Computational Optimization
+# ViT Research Engine — OSCC Spatial Features and CUDA Rust Algorithms
 
-**Rust + Hugging Face Candle + NVIDIA CUDA** research prototype for controlled comparisons of Vision Transformers and experimental numerical optimizations.
+Research sandbox in **Rust**, focused on mathematically controlled, model-agnostic
+algorithm experiments for oral squamous cell carcinoma (OSCC) histopathology.
 
-## Research goals
+**Current migration (2026-11-23):** Candle has been removed from the executable
+code. There are now two explicitly separate paths:
 
-1. Evaluate feature representations and, with appropriate downstream training and labeled data, pattern recognition relevant to Oral Squamous Cell Carcinoma (OSCC).
-2. Compare **different model architectures/checkpoints** under a defensible common evaluation protocol.
-3. Compare **alternative implementations of mathematical operations** within the **same** model: numerical parity, latency, throughput, memory, accuracy and robustness.
+1. **`motor_inferencia/`** — standalone Rust/ndarray DINOv2 Base **CPU numerical
+   reference**, with original FP32 safetensors loading, full 12-block forward, and
+   both global and spatial features. This path must still pass real-checkpoint
+   reference parity; synthetic CI tests alone do not establish model equivalence.
+2. **`cuda-kernels/`** — NVIDIA CUDA Rust Tile (`cutile-rs`) operation experiment,
+   starting with a model-independent FP32 residual add over a realistic ViT
+   hidden-state size. Requires CUDA 13.3+, compatible NVIDIA driver and GPU.
+   This is **not** a full DINOv2 CUDA inference engine yet.
 
-The test framework is designed to be **model-agnostic**. DINOv2 Base is only the **first checkpoint**. The benchmarking system and its future task-specific metrics must not depend on it.
+The previous Candle baseline remains accessible in Git history at
+[commit 7b16388](https://github.com/jhserodio/exploring-vit-algorithms-improvments/commit/7b16388f3675cc6af104fb4b2176eeb18bbff254),
+but is not a current runtime dependency.
 
-> **Research status (2026-11-23):** Eight Rust tests (4 unit + 4 CLI integration), format, Clippy and command-line checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799). DINOv2 Base inference **code** exists; original-checkpoint loading, RTX 5070 Ti execution and numerical reference parity remain **unverified**. This is not an OSCC diagnosis system.
+## Why dense spatial features?
 
-## Hardware and execution
+For `facebook/dinov2-base` with 518x518 input and 14x14 patches:
 
-- **GPU:** NVIDIA RTX 5070 Ti (Blackwell, SM 120). Native Blackwell compilation is available in CUDA Toolkit 12.8+; hardware/driver/Candle compatibility still needs workstation validation.
-- **CPU:** AMD Ryzen 7 (exact SKU to confirm). CPU workers handle image decoding, metadata, preprocessing, experiment control and statistical analysis.
-- **Engine:** Rust 2024; Hugging Face Candle at the repository's pinned Git submodule revision.
-- **Development:** Docker Compose with separate CPU and GPU execution services. No privileged container is required for normal inference. Native execution remains supported.
+- `cls` / global descriptor: `[1, 768]`
+- `patch_tokens` in row-major token order: `[1, 1369, 768]`
+- `spatial_map` in channel-first order: `[1, 768, 37, 37]`
 
-Ollama or llama.cpp may become an **optional** experiment-control assistant; they are not replacements for Candle or the scientific benchmark runner. LLM workloads should not compete for GPU resources during isolated timing experiments.
+The features are **not tumor probabilities or segmentation masks**. Any
+clinical-data task requires suitable labels, an independently trained/validated
+task head, patient-level splits and uncertainty estimates.
 
-## Phase 0 — Get a trustworthy starting point
-
-Read **[PHASE0.md](PHASE0.md)** for complete runnable checks, model setup, SELinux behavior, explicit CPU/CUDA commands and acceptance criteria.
-
-CPU-only correctness tests:
-
-```bash
-git submodule update --init --recursive
-cd motor_inferencia
-cargo test --no-default-features
-```
-
-CUDA feature extraction of a local input with original `facebook/dinov2-base` weights (after validating toolchain compatibility and preparing those files):
+## Run CPU correctness tests
 
 ```bash
 cd motor_inferencia
-cargo run --release --features cuda -- \
-  --cuda --weights ../models/model.safetensors --image ../data/example.png
+cargo fmt --all -- --check
+cargo test
+cargo clippy --all-targets -- -D warnings
 ```
 
-Docker Compose from repository root (after placing the required `models/model.safetensors` and `data/example.png`):
+## Run original DINOv2 checkpoint through the Rust CPU reference
+
+Prepare local `models/model.safetensors` and `data/example.png` (see
+[PHASE0.md](PHASE0.md)). A full 518px/12-layer CPU forward may be slow.
 
 ```bash
-docker compose run --build --rm vit-cpu
+cd motor_inferencia
+cargo run --release -- --cpu --weights ../models/model.safetensors --image ../data/example.png \
+  --export-prefix ../results/reference/dinov2
+```
+
+This exports input, CLS, complete normalized hidden state and the channel-first
+spatial map as local FP32 little-endian arrays. Files under `results/` and
+`*.f32le` are ignored by Git; exported patient-derived tensors remain sensitive.
+
+To independently compare all 1,370 output tokens against Hugging Face:
+
+```bash
+python3 scripts/compare_dinov2_reference.py \
+  --image data/example.png --model-dir models --device cpu
+```
+
+This command requires optional Python dependencies `numpy`, `torch` and
+`transformers`. The comparison has not been demonstrated with real weights here.
+
+## Run the first native CUDA Rust kernel
+
+CUDA Rust Tile needs **CUDA 13.3+** and NVIDIA GPU `sm_120` support. It is
+kept out of CPU CI; it must run on the RTX 5070 Ti before being marked validated.
+
+```bash
+cargo run --release --manifest-path cuda-kernels/Cargo.toml
+# Or, on Fedora with NVIDIA Container Toolkit:
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-The GPU service runs actual CUDA inference rather than CPU tests. To compare identical normalized input tensors with the original Hugging Face DINOv2 Base, see the optional `scripts/compare_dinov2_reference.py` tool described in [PHASE0.md](PHASE0.md). This tool is implemented but **real-checkpoint parity has not yet been validated**. Compose volumes use SELinux shared-label `:z`, which **relabels host paths**; see [PHASE0.md](PHASE0.md) before using sensitive datasets.
+This validates a residual-add operation over `1370 * 768` FP32 values.
+It does **not** execute a whole neural network. `motor_inferencia --cuda` fails
+explicitly until the full model's GPU operation backend is implemented.
 
-This baseline intentionally uses **518 × 518** images to retain the model's original positional grid; it does not reproduce the default Hugging Face 224-pixel preprocessing. Output is a **CLS embedding `[1,768]`**, not a classification score. Do not treat a successful run as numerical equivalence until the independent reference-parity test passes.
+## Architecture and research gates
 
-## Planned research pipeline
+- `ModelAdapter`: model-owned weights, preprocessing and output semantics.
+- `DenseFeatures`: framework-independent CLS, patch tokens and spatial map.
+- `OperationBackend` (planned): reference or CUDA Rust operator with an
+  explicit capability contract; never silent fallback to CPU.
+- `DatasetProvider / Geometry`: slide coordinates, scale, annotated regions,
+  patient-safe split and provenance.
+- `TaskHead`: trained/evaluated separately from the backbone, depending on
+  what labels are actually available.
 
-```text
-Patient/slide-grouped dataset + labels
-            |
-     Experiment validator
-            |
- CPU decode and model-owned preprocessing
-            |
-        ModelAdapter  <-- DINOv2, future backbones
-            |
-        OperationBackend  <-- reference and optimized math
-            |
-     Task-specific evaluator
-            |
- Accuracy/robustness + GPU timing/VRAM + reproducibility report
-```
+For the scientific phases and SP-01 to SP-16 validation matrix, see
+[roadmap.md](roadmap.md). For current acceptance gates see
+[test-checklist-roadmap.md](test-checklist-roadmap.md).
 
-For scientific comparisons, preserve identical patients and scoring protocols, model-specific native preprocessing, explicit task/output compatibility, and immutable experiment configurations. Compare kernel optimizations against a fixed backbone/checkpoint, *separately* from backbone-vs-backbone comparisons.
+## Hardware and reproducibility
 
-See **[roadmap.md](roadmap.md)** for the authoritative 10-phase plan and **[test-checklist-roadmap.md](test-checklist-roadmap.md)** for the compact execution tracker.
+Target: NVIDIA RTX 5070 Ti, Ryzen 7 CPU, host Fedora. CPU work handles image
+decode, tiling, geometry and input batches; GPU work should eventually keep
+model layers on the device without intermediate CPU round trips. Record
+`scripts/collect_env.sh`, model hash, image hash, model-specific preprocessing,
+dtypes and tested CUDA/Rust versions per result. A green CPU CI is **not**
+proof of CUDA compatibility or OSCC quality.
 
-## Data and checkpoints
-
-Store image data and model weights outside Git (`data/` and `models/` are ignored). Keep patient data de-identified and use patient-/slide-disjoint splits. No result derived solely from synthetic test fixtures is evidence of OSCC recognition.
-
-## Licensing and attribution
-
-DINOv2: Meta AI / Hugging Face (`facebook/dinov2-base`). Hugging Face Candle is a separate upstream project included as a Git submodule. Follow dataset, code and model-specific licenses independently.
+Data and weights must stay outside Git; never commit unredacted patient images
+or derived outputs. Check licenses and access for alternative pathology
+backbones (e.g. Hibou-B or Phikon-v2).

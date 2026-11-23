@@ -1,16 +1,13 @@
 [package]
 name = "motor_inferencia"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
-[features]
-default = []
-cuda = ["candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
-
+# Research reference is CPU-only, implemented in Rust without Candle.
+# GPU kernels are native CUDA Rust and live in ../cuda-kernels (CUDA 13.3+).
 [dependencies]
-candle-core = { path = "../candle/candle-core" }
-candle-nn = { path = "../candle/candle-nn" }
-candle-transformers = { path = "../candle/candle-transformers" }
-image = "0.24.9"
-hf-hub = "0.3.2"
 anyhow = "1.0.86"
+image = "0.24.9"
+ndarray = "0.16.1"
+safetensors = "0.5.3"
+libm = "0.2.11"

@@ -2,10 +2,8 @@ x-research-base: &research-base
   build:
     context: .
     dockerfile: Dockerfile
-  working_dir: /workspace/motor_inferencia
   volumes:
-    # Shared SELinux labels permit both services to mount the same paths on Fedora.
-    # :z relabels host files: use dedicated paths. See PHASE0.md.
+    # Shared :z labels for Fedora SELinux; relabels host files.
     - .:/workspace:z
     - ${DATA_DIR:-./data}:/data:ro,z
     - ${MODEL_DIR:-./models}:/models:ro,z
@@ -13,16 +11,18 @@ x-research-base: &research-base
 services:
   vit-cpu:
     <<: *research-base
-    # CPU-only test execution without claiming a GPU device.
+    working_dir: /workspace/motor_inferencia
+    command: ["cargo", "test"]
 
   vit-gpu:
     <<: *research-base
     profiles: ["gpu"]
+    working_dir: /workspace/cuda-kernels
     environment:
       CUDA_COMPUTE_CAP: "120"
-    # Explicit CUDA inference, not the Dockerfile's CPU-test default.
-    # Expects /models/model.safetensors and /data/example.png.
-    command: ["cargo", "run", "--release", "--features", "cuda", "--", "--cuda", "--weights", "/models/model.safetensors", "--image", "/data/example.png"]
+      CUDA_TOOLKIT_PATH: "/usr/local/cuda"
+    # Native CUDA Rust operation probe only, not full model inference.
+    command: ["cargo", "run", "--release"]
     deploy:
       resources:
         reservations:
@@ -30,4 +30,3 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    # Ordinary inference needs no SYS_ADMIN. Profile separately if needed.

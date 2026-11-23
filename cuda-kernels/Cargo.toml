@@ -1,0 +1,10 @@
+[package]
+name = "vit-cuda-kernels"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Native NVIDIA CUDA Rust Tile kernel programming; no Candle.
+# Compile/run with CUDA 13.3+ on the RTX 5070 Ti.
+[dependencies]
+cutile = "=0.5.0"

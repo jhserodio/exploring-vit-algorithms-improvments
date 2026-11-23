@@ -1,35 +1,33 @@
-# Execution checklist — ViT research engine
+# Execution checklist — CUDA Rust migration and spatial features
 
-**Canonical scientific roadmap:** [roadmap.md](roadmap.md). This file is a concise validation tracker, not a duplicate copy of the full 10-phase roadmap.
+**Source of truth:** [roadmap.md](roadmap.md). Updated 2026-11-23,
+branch `feat/testing-background`.
 
-Last audited: **2026-11-23**. Target branch: `feat/testing-background`.
+## Implemented in source (not all validated)
 
-## Verified or implemented
+- [x] Remove Candle imports and dependencies from the new engine.
+- [x] Add `ModelAdapter` interface and model-independent `DenseFeatures` output.
+- [x] Preserve CLS, 1,369 ordered patches and [768,37,37] spatial map.
+- [x] Add patch indexing, shape and CHW transpose tests.
+- [x] Retain CPU resize/crop geometry and coordinate round-trip tests.
+- [x] Implement FP32 original DINOv2 Base loading/CPU forward as reference.
+- [x] Add native CUDA Rust Tile residual-add operation probe.
+- [x] Extend Hugging Face parity script to check CLS and patch tokens.
+- [x] Separate CPU CI and local GPU kernel probe.
 
-- [x] Four preprocessing/architecture unit tests, four CLI integration tests, formatting, Clippy and CLI checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799).
-- [x] DINOv2 Base model-specific forward and checkpoint loader code is present (not a proven real-checkpoint result).
-- [x] Preprocessing fixtures, tensor shape/CHW/dtype and pixel normalization checks are implemented.
-- [x] CUDA 12.8.1 / SM 120 **configured** in Docker; actual compatibility not verified.
-- [x] `vit-gpu` executes a distinct CUDA inference command; `vit-cpu` retains CPU-only tests.
-- [x] Default container avoids `SYS_ADMIN`; shared SELinux relabeling and read-only input mounts documented.
-- [x] Synthetic fixtures, model weights and datasets are handled separately; sensitive weights/data are gitignored.
+## Open validation and research gates
 
-## Open acceptance gates
+- [ ] CI is green for this branch's new no-Candle implementation.
+- [ ] Real weights load and full DINOv2 CPU forward produces finite features.
+- [ ] Full hidden-state parity with Hugging Face reference has passed.
+- [ ] CUDA Rust Tile operation probe passes on RTX 5070 Ti with CUDA 13.3+.
+- [ ] Full GPU DINOv2 forward implemented without Candle.
+- [ ] Per-operation and full-model CPU/CUDA numerical comparisons pass.
+- [ ] WSI/tile geometry and patient-safe dataset manifests validated.
+- [ ] Histopathology backbone (e.g. Hibou-B) loads and matches its own reference.
+- [ ] One identical optimized kernel runs in at least two compatible backbones.
+- [ ] OSCC task head and region metrics validated against eligible annotations.
 
-- [x] Expanded 8-test CPU suite and optional Python parity-runner help check passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799) (model parity itself was not run).
-- [ ] Run actual DINOv2 checkpoint on CPU: output finite with shape `[1,768]`.
-- [ ] Run real checkpoint on the RTX 5070 Ti and save environment via `scripts/collect_env.sh`.
-- [ ] Independent, identical-normalized-input PyTorch versus Candle comparison passes declared tolerance.
-- [ ] Introduce versioned experiment configuration and patient-/slide-safe dataset manifests (Phase 1).
-- [ ] Implement model-independent adapter contract, registry and second backbone (Phase 2).
-- [ ] Add reference mathematical operation tests and CPU/GPU numerical parity (Phase 3).
-- [ ] Evaluate OSCC only on appropriately labeled data and leak-free patient splits (Phase 4).
-- [ ] Collect controlled CUDA benchmarks before proposing algorithmic speedups (Phases 5–7).
-
-## Where to look
-
-- [PHASE0.md](PHASE0.md): commands, SELinux notes, model weights, CPU and GPU evidence.
-- [roadmap.md](roadmap.md): all scientific goals, phases 0–9, and sprint S01–S10.
-- [GitHub Actions](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions): CI history.
-
-**Rule:** `[x]` indicates that the *specific stated subtask* has been implemented or has explicit verification evidence. It does not mean the parent phase has reached its exit gate.
+`[x]` in the first section means source implementation exists; numerical
+and CUDA success require a separate documented execution. Do not report
+patient-level quality, kernel speedups or localization based on fixtures.

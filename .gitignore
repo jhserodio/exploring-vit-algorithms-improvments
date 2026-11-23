@@ -1,17 +1,15 @@
-# Large/private data and model checkpoints must stay off Git.
+# Weights, private datasets and research outputs must stay outside Git.
 /models/
 /data/
 /results/
 /target/
 **/target/
 .env
-*.safetensors
-*.pt
-*.pth
-
-# Local reference validation may export normalized tensors derived from patient data.
-*.f32le
-*.parity.json
 .venv/
 __pycache__/
 *.pyc
+*.safetensors
+*.pt
+*.pth
+*.f32le
+*.parity.json

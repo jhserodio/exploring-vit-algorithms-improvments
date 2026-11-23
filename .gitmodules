@@ -1,3 +1,0 @@
-[submodule "candle"]
-	path = candle
-	url = https://github.com/huggingface/candle.git

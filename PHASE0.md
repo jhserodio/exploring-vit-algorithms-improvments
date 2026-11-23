@@ -1,94 +1,102 @@
-# Phase 0 — reproducible baseline and GPU acceptance gates
+# Phase 0 — Candle-free Rust CPU reference + native CUDA Rust operation probe
 
-**Status (2026-11-23):** Eight Rust tests (4 unit + 4 CLI integration), formatting, Clippy and CLI checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799). CUDA runtime, original checkpoint loading and numerical parity have **not** been verified on the RTX 5070 Ti. This project is research, not an OSCC diagnostic application.
+**Current state:** architecture migration underway. Native CUDA model forward
+is deliberately **not yet implemented**. Do not conflate the CUDA kernel probe
+with real DINOv2 GPU inference.
 
-## Implemented
-
-- Rust/Candle DINOv2 Base with 12 transformer layers and CLS output `[1, 768]` for a single image; code exists but requires a real checkpoint run.
-- The custom `dinov2-base-native518-v1` preprocessing profile: RGB, resize shorter side to 592, Catmull-Rom, center crop to 518×518, ImageNet channel normalization, FP32 CHW. This is **not** the default Hugging Face 224px preprocessor.
-- CPU correctness tests, feature-gated CUDA, and independent CPU/GPU Compose services.
-
-## CPU checks
+## 1. CPU reference
 
 ```bash
-git submodule update --init --recursive
 cd motor_inferencia
 cargo fmt --all -- --check
-cargo test --no-default-features
-cargo clippy --all-targets --no-default-features -- -D warnings
-cargo run --no-default-features -- --help
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo run -- --help
 ```
 
-Alternatively, from the repository root:
+The Rust reference uses `ndarray` for matrix operations, `safetensors` to
+load original DINOv2 Base FP32 weights, and `image` to decode/normalize RGB.
+Candle is not a dependency or a runtime fallback.
 
-```bash
-docker compose run --build --rm vit-cpu
-```
+Output for the single-image 518x518 profile:
 
-These checks do **not** validate inference with the actual DINOv2 checkpoint.
+| Name | Shape | Interpretation |
+| --- | --- | --- |
+| `cls` | `[1,768]` | Global descriptor |
+| `patch_tokens` | `[1,1369,768]` | Row-major 37x37 spatial tokens |
+| `spatial_map` | `[1,768,37,37]` | Channel-first view of patch features |
 
-## Prepare model and image inputs
+No output is a cancer classifier, pixel mask or clinically validated result.
 
-Use dedicated directories outside sensitive host paths. Data and weights must not enter Git.
+## 2. Real checkpoint validation (open)
 
 ```bash
 mkdir -p models data results
-# After installing huggingface_hub CLI on the host:
+# After installing the Hugging Face CLI on the host:
 hf download facebook/dinov2-base model.safetensors config.json --local-dir ./models
-# Provide a permitted, non-sensitive local PNG at ./data/example.png
+# Stage a non-sensitive local image at data/example.png
+
+cargo run --release --manifest-path motor_inferencia/Cargo.toml -- \
+  --cpu --weights models/model.safetensors --image data/example.png \
+  --export-prefix results/reference/dinov2
+
+python3 scripts/compare_dinov2_reference.py \
+  --image data/example.png --model-dir models --device cpu
 ```
 
-Pin the model revision and hash `models/model.safetensors` for reproducible scientific runs.
+The Python reference comparison requires optional `numpy`, `torch` and
+`transformers`. It compares the **entire hidden state** (CLS + all patch
+tokens), not merely CLS. Tolerances `--atol` and `--rtol` are predeclared
+before observing results. The checkpoint's keys, positional embeddings and
+activation semantics must be validated, not assumed correct.
 
-## Run actual inference
-
-From the repository root:
-
-```bash
-# Full model CPU path (may be slow)
-cd motor_inferencia
-cargo run --release --no-default-features -- --cpu --weights ../models/model.safetensors --image ../data/example.png
-
-# Full model CUDA path (requires a compatible host driver / toolkit)
-cargo run --release --features cuda -- --cuda --weights ../models/model.safetensors --image ../data/example.png
-```
-
-Or use the dedicated GPU Compose command from the repository root:
+## 3. Native GPU kernel probe (not DINOv2 inference)
 
 ```bash
+cargo run --release --manifest-path cuda-kernels/Cargo.toml
+# or:
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-Unlike the CPU service, `vit-gpu` **always runs the CUDA feature and an actual inference command**. It fails if model weights, the image, GPU support or CUDA initialization are missing; never interpret Compose configuration as proof of successful GPU inference.
+This package uses NVIDIA `cutile-rs` and a Rust Tile kernel to add two
+tensors of 1,052,160 elements (1,370 × 768). Output must equal 2.0 at
+every element. Requires CUDA 13.3+, a compatible host NVIDIA driver and
+an RTX 5070 Ti or other supported GPU. It is isolated from CPU CI.
 
-## Fedora SELinux mounts
+The GPU operation is a genuine CUDA Rust program; it is **not currently
+wired into the 12-block DINOv2 forward**. No full-GPU speedup or VRAM claim
+can be made at this milestone.
 
-The Docker Compose bind mounts use shared `:z` for the repository and `:ro,z` for input directories so both services can access the same content under enforcing SELinux. The `z` option **relabels host files**, including read-only mounts. Stage copies of pathology data into dedicated directories; do not use this pattern against arbitrary system paths or clinical-data storage whose labels must not change.
+## 4. Geometric fidelity for pathology
 
-Configure `DATA_DIR` and `MODEL_DIR` in an ignored `.env` based on `.env.example` if required.
+The 518px center crop is a model-specific baseline for a single image tile.
+`CropGeometry` retains resize/crop dimensions, and supports processed-pixel
+to source-image coordinate conversion and spatial-token centers. For WSI,
+slide origin, pyramid level, micrometers per pixel, and mask registration
+must be added to the dataset manifest. Never interpret a feature location
+as a lesion without regional labels and a trained head.
 
-## Independent reference parity
+CPU processing should prepare the next tile batch while the GPU works.
+Avoid copying internal network activations to the host during inference.
 
-Use the independent verification runner (`scripts/compare_dinov2_reference.py`) with the same **normalized tensor** supplied to Candle and Hugging Face PyTorch. This requires optional Python research dependencies (`torch`, `transformers`, `numpy`), the original checkpoint, and an explicit run; it is not part of the lightweight CPU CI.
+## 5. Fedora SELinux
 
-The parity runner invokes the Rust CLI with `--export-prefix` to write a float32 little-endian input tensor and output embedding under `results/`, then feeds that same input to the local Hugging Face model. Those tensor dumps may encode patient information; treat them as sensitive and do not commit or share them. Example after setting up the optional Python environment:
+Compose volumes use shared `:z`, and input directories use `:ro,z`.
+The `z` option relabels host files even when mounted read-only. Stage
+copies in dedicated research folders; do not mount protected patient
+storage or arbitrary system paths to be relabeled.
 
-```bash
-python3 scripts/compare_dinov2_reference.py --image data/example.png --model-dir models --device cpu
-python3 scripts/compare_dinov2_reference.py --image data/example.png --model-dir models --device cuda
-```
+## 6. Acceptance gates
 
-Record maximum absolute error, relative L2 error, model/checkpoint hashes and environment. Do not assert equivalence until a matching checkpoint passes declared tolerances.
+- [x] No Candle dependency in the new Rust engine manifest.
+- [x] Standalone spatial representation with a deterministic CLS/patch/map contract and CPU tests implemented.
+- [x] Crop geometry and inverse mapping checks implemented.
+- [x] CUDA Rust residual-add kernel added in a separate package.
+- [ ] Fresh CPU CI green for this migration.
+- [ ] Original checkpoint full CPU inference passes independent CLS + patch parity.
+- [ ] CUDA Rust kernel executes successfully on the RTX 5070 Ti with environment recorded.
+- [ ] Full model native CUDA forward integrated with reusable operation interfaces.
+- [ ] Reference-versus-CUDA per-operation numerical tests on GPU pass.
+- [ ] Patient-/slide-safe dataset manifest and legitimate OSCC evaluation protocol exist.
 
-## Exit checklist
-
-- [x] Four CPU unit tests plus fmt / Clippy / CLI-help passed on 2026-10-08.
-- [x] CUDA 12.8.1 / `sm_120` is configured; no privileged container for ordinary execution.
-- [x] DINOv2 Base forward and checkpoint loader code is present.
-- [x] A specific GPU Compose run command and SELinux mount strategy are documented.
-- [x] Eight Rust tests (4 unit + 4 CLI integration), formatting, Clippy and command-line checks passed in [2026-11-23 CPU CI: 8 tests / fmt / CLI / Clippy / parity-script help](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45234034799); further changes require their own CI run.
-- [ ] A real CPU checkpoint run produces finite `[1,768]` embeddings.
-- [ ] The RTX 5070 Ti CUDA run succeeds and environment is captured.
-- [ ] Independent, identical-input reference parity passes.
-
-See [roadmap.md](roadmap.md) for the canonical 10-phase plan and [test-checklist-roadmap.md](test-checklist-roadmap.md) for the compact execution checklist.
+Read [roadmap.md](roadmap.md) for the full staged refactoring plan.

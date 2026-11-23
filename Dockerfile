@@ -1,10 +1,11 @@
-# Phase 0 research environment for NVIDIA Blackwell / GeForce RTX 5070 Ti.
-# The host NVIDIA driver must support this CUDA runtime.
-FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
+# Native NVIDIA CUDA Rust research environment on Blackwell RTX 5070 Ti.
+# CUDA Tile Rust requires CUDA 13.3+; host driver must support that runtime.
+FROM nvidia/cuda:13.3.0-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     CUDA_COMPUTE_CAP=120 \
     CUDA_HOME=/usr/local/cuda \
+    CUDA_TOOLKIT_PATH=/usr/local/cuda \
     RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo
 ENV PATH="${CUDA_HOME}/bin:${CARGO_HOME}/bin:${PATH}"
@@ -19,4 +20,5 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
  && rustup component add rustfmt clippy
 
 WORKDIR /workspace/motor_inferencia
-CMD ["cargo", "test", "--no-default-features"]
+# CPU reference tests are the default; GPU prototype runs in vit-gpu service.
+CMD ["cargo", "test"]
