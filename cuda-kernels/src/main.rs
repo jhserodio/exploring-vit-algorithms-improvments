@@ -41,11 +41,11 @@ mod kernels {
         input: &Tensor<f32, { [-1, -1] }>,
     ) {
         let x: Tile<f32, { [BM, BN] }> = input.load_like(out);
-        let max = reduce_max(x, 1 i32)
+        let max = reduce_max(x, 1_i32)
             .reshape(shape![BM, 1])
             .broadcast(out.shape());
         let numerator = exp(x - max);
-        let denominator = reduce_sum(numerator, 1 i32)
+        let denominator = reduce_sum(numerator, 1_i32)
             .reshape(shape![BM, 1])
             .broadcast(out.shape());
         out.store(true_div(numerator, denominator));
@@ -64,7 +64,7 @@ mod kernels {
         let row = program_id(0);
         let col = program_id(1);
         let mut value = load_tile_mut(out);
-        for k in 0 i32..(K / BK) {
+        for k in 0_i32..(K / BK) {
             value = mma(lhs.load([row, k]), rhs.load([k, col]), value);
         }
         out.store(value);
