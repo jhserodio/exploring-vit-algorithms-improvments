@@ -12,10 +12,10 @@ use std::{
 // Explicit export is intended for reference-parity tests; the normalized input
 // may contain sensitive patient information and must never be committed.
 fn write_f32_le(path: &Path, values: &[f32]) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
     let mut writer = std::io::BufWriter::new(std::fs::File::create(path)?);
     for value in values {
