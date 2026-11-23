@@ -1,72 +1,80 @@
-# Fase 1 — CUDA Rust: architecture, tests and acceptance gates
+# Fase 1 — Critérios técnicos de provisionamento da sandbox
 
-**Scope:** The official DINOv2 Base FP32 518px CPU reference passed full
-Hugging Face parity in [V0](v0-validation.md). V1 implements reusable CUDA Rust
-kernels and the complete GPU model, retaining `[1,1370,768]` hidden features
-and `[1,768,37,37]` spatial map.
+**Objetivo exclusivo:** preparar Rust, CUDA, containers, smoke tests, CI,
+contratos e preflight para receber novos experimentos posteriormente.
+A Fase 1 **não** contém implementação de algoritmos científicos nem
+exige executar o DINOv2 completo na GPU.
 
-## Acceptance stages
+## Matriz de aceitação da configuração
 
-| Gate | Deliverable | Required evidence |
+| Gate | Critério | Evidência |
 | --- | --- | --- |
-| V1.A | Runtime-independent op contracts (shapes, dtype, layout, device) | CPU CI |
-| V1.B | Native CUDA Rust source builds with CUDA 13.3 | [Passed source CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345); NO GPU claim |
-| V1.C | Residual, stable softmax and GEMM probes on RTX 5070 Ti | Recorded GPU output, driver, toolkit and Git SHA |
-| V1.D | Remaining FP32 LayerNorm, exact GELU, patch projection, attention | CPU/GPU operator fixtures and errors |
-| V1.E | Complete 12-block DINOv2 Base forward on device | Original checkpoint and normalized input, no CPU fallback |
-| V1.F | CLS, all spatial patches, each block and full model parity | max_abs/relative_L2, tolerance, VRAM and latency |
+| E1 | CPU e GPU em containers separados | `Dockerfile.cpu`, `Dockerfile`, Compose |
+| E2 | CUDA Rust fixado, compilação reprodutível | `cuda-kernels/Cargo.toml` + `Cargo.lock`; source CI |
+| E3 | Contratos independentes do modelo | `operation_contract.rs`, unit tests |
+| E4 | Probes de smoke residual/softmax/GEMM | `cuda-kernels/src/main.rs`; compilação CUDA |
+| E5 | Preflight e Compose configuráveis sem GPU | Python preflight/test, `docker compose config` |
+| E6 | Diagnóstico na GPU real pronto | `scripts/v1-gpu-acceptance.sh` e `collect_env.sh` |
+| E7 | Guardrails de privacidade e documentação | `.gitignore`, README, roadmap |
 
-**V1 is NOT complete until V1.F passes.** Compiling code or running isolated
-kernels does not prove that a full model executes on GPU.
+**Encerramento de E1–E7:** as ferramentas, os testes de configuração e
+a CI passam. **Não confundir com `gpu-verified`.** O smoke local na
+RTX 5070 Ti é um requisito operacional antes do primeiro experimento
+com GPU, que depende do computador do pesquisador.
 
-## Operation contracts
+## Distinção de estados
 
-The same `motor_inferencia/src/operation_contract.rs` module is imported
-by CPU tests and the GPU probe; its supported operations are GEMM,
-residual add, last-axis softmax, LayerNorm and GELU. The contract rejects
-mismatched shape, dtype and device. GPU calls must never fall back to CPU.
+- `source-ready`: `cargo check --locked` passou em CUDA 13.3;
+- `sandbox-config-ready`: mais preflight, tests, Compose e documentação;
+- `gpu-verified`: GPU real executou smoke e exportou logs;
+- `experiment-ready`: harness de fixtures, ablação, benchmark e relatório
+  estão prontos (Fases 2–7).
 
-The first GPU source probes (residual/softmax/GEMM) use
-`cutile = "=0.5.0"`, NVIDIA CUDA Rust Tile. They are NOT yet connected
-to the 12-block forward, and they do NOT yet implement production-length
-(1,370-token) masked attention softmax. Padding and a full-row normalization
-strategy are mandatory before substituting attention.
+`gpu-verified` e `experiment-ready` não são afirmações feitas por esta
+fase. Não inserir em CI falsos resultados de GPU ou resultados clínicos.
 
-## GPU model execution
+## Ambiente-alvo
 
-- Model: `facebook/dinov2-base`, pinned weights from the V0 report
-- Image: one RGB input preprocessed into `[1,3,518,518]` FP32
-- Patch projection: 1,369 token vectors, dimension 768
-- CLS + positional embeddings: 1,370 tokens
-- 12 encoder blocks: LN → 12-head Q/K/V attention (64/head) → projection →
-  residual LayerScale → LN → GELU MLP (768→3072→768) → residual LayerScale
-- Final layernorm and CLS/CHW spatial export
-- GPU memory: keep all internal activations on GPU; transfer only input and
-  requested outputs, not intermediate layer states in normal inference
+```text
+Fedora host / RTX 5070 Ti (sm_120)
+│
+├── CPU: rust:1.90-bookworm
+│   ├── reference DINOv2 Base (V0)
+│   ├── shape/dtype/device contracts
+│   └── CI unit/integration + preflight
+│
+└── CUDA: nvidia/cuda:13.3.0-devel-ubuntu24.04
+    ├── Rust toolchain, cutile=0.5.0
+    ├── independent CUDA-source CI (sem GPU)
+    └── GPU-only smoke: residual / softmax / GEMM
+```
 
-Use the CPU for WSI/tile reading, RGB decode, normalization, geometry and
-bounded batch prefetch. Use GPU for weights, forward operations and output
-feature extraction. The RTX 5070 Ti has a 16 GB VRAM budget, but real memory
-usage must be measured.
+As montagens do Docker Compose usam `:z` por SELinux Fedora, o que pode
+relabelar os arquivos do host **mesmo em montagens somente leitura**.
+Usar pastas de pesquisa dedicadas e nunca montar dados protegidos de
+pacientes apenas para fazer smoke tests.
 
-## Repeat the operation-only checks locally
+## Comandos
 
-```bash
+```sh
+python3 scripts/sandbox_preflight.py --json
+docker compose --profile gpu config --quiet
+docker compose run --build --rm vit-cpu
+
+# Próxima validação no PC real:
 bash scripts/v1-gpu-acceptance.sh results/v1-gpu
+# Ou Docker + NVIDIA Container Toolkit:
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-The first script records Git SHA, CPU, GPU, driver and CUDA toolkit to local
-files and fails if runtime prerequisites are missing. **These scripts only
-run isolated kernels**; a further GPU full-checkpoint command and reference
-parity report are blocking for closing the phase.
+O programa CPU `motor_inferencia --cuda` continua falhando
+explicitamente porque o forward GPU completo não faz parte desta branch.
+Os kernels atuais são instrumentos de smoke, não candidatos de pesquisa.
 
-## Dependencies / research ordering
+## O que foi transferido para futuras branches
 
-The OSCC data label and magnification audit (Phase 2) can proceed in
-parallel with CUDA optimization. Comparing more than one backbone (Phase 3)
-should happen before declaring a model-agnostic algorithm. Independent
-operator parity and precision studies (Phase 4) expand the V1 blocking checks.
-Subsequent patient-safe task training and metrics are separate from runtime
-correctness. An unlabeled feature map is not a tumor mask or a clinical
-diagnostic result.
+Implementar operadores de atenção otimizados, DINOv2 GPU inteiro,
+comparar performance científica de kernels, Hibou-B real, heads
+supervisionados, treinamento OSCC, máscaras tumorais e avaliações
+clínicas. A presente branch somente estabelece os mecanismos que
+permitirão medir essas atividades futuramente.

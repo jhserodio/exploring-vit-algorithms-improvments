@@ -1,6 +1,6 @@
 # V0 — DINOv2 Base FP32 reference and spatial feature validation
 
-**V0 status: COMPLETE (2026-11-23).** The original model weights load successfully, and the independent PyTorch reference agrees with all 1,370 FP32 tokens and the spatial CHW map. [Pinned validation evidence](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357). The native CUDA forward is a separate Phase 1 milestone and is **not** yet implemented.
+**V0 status: COMPLETE (2026-11-23).** The original model weights load successfully, and the independent PyTorch reference agrees with all 1,370 FP32 tokens and the spatial CHW map. [Pinned validation evidence](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357). The native CUDA forward is future research implementation, outside this sandbox roadmap. Phase 1 covers the environment and smoke tests only.
 
 ## 1. CPU reference
 
@@ -95,8 +95,9 @@ storage or arbitrary system paths to be relabeled.
 - [x] Original checkpoint loads and completes finite FP32 inference on CPU — [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
 - [x] Identical-input FP32 parity passes for CLS, all 1,369 patches, the full hidden state and CHW map (maximum absolute error 0.0003071; tolerance 0.001), with recorded revision and hashes — [evidence](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
 
-**V0 scope:** The CUDA Rust operation probe, full CUDA inference and
-reference-versus-GPU parity are **Phase 1** gates. Patient-level dataset manifests
-and OSCC labels are **Phase 2+** gates. They do not hold V0 open.
+**V0 scope:** The environment and CUDA smoke probes are covered in sandbox
+Phase 1. The fixtures/oracles for future tests are detailed in Phase 2.
+Full-model GPU inference, clinical annotations and OSCC model improvements
+are outside this branch and do not hold V0 or Phase 1 open.
 
 Read [roadmap.md](roadmap.md) for the full staged refactoring plan.

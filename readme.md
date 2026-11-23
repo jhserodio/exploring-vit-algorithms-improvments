@@ -1,112 +1,92 @@
-# ViT Research Engine — OSCC Spatial Features and CUDA Rust Algorithms
+# ViT Research Sandbox — Rust / CUDA / Spatial Test Infrastructure
 
-Research sandbox in **Rust**, focused on mathematically controlled, model-agnostic
-algorithm experiments for oral squamous cell carcinoma (OSCC) histopathology.
+A **sandbox de desenvolvimento e testes** para estudos futuros de
+otimizações algorítmicas em modelos visuais (ViT) com aplicação
+planejada em histopatologia de OSCC.
 
-**Current migration (2026-11-23):** [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849) passed (10 unit + 4 CLI tests, Rustfmt, Clippy, Python help). The project now has a standalone Rust CPU reference and an isolated native CUDA Rust package. There are now two explicitly separate paths:
+**Escopo desta branch `feat/testing-background`:** ambiente,
+configuração, interfaces, fixtures sintéticas, validação numérica,
+reprodutibilidade, benchmark e CI. **Não** desenvolver nesta branch
+novos algoritmos otimizados, treinamento de modelos, inferência
+clínica ou avaliação real de câncer.
 
-1. **`motor_inferencia/`** — standalone Rust/ndarray DINOv2 Base **CPU numerical
-   reference**, with original FP32 safetensors loading, full 12-block forward, and
-   both global and spatial features. This CPU baseline **passed full-checkpoint parity** for CLS, 1,369 patches and the spatial CHW map on [2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357); no OSCC diagnostic validity is implied.
-2. **`cuda-kernels/`** — NVIDIA CUDA Rust Tile (`cutile-rs`) operation experiment,
-   starting with a model-independent FP32 residual add over a realistic ViT
-   hidden-state size. Requires CUDA 13.3+, compatible NVIDIA driver and GPU.
-   This is **not** a full DINOv2 CUDA inference engine yet.
+## Estado atual
 
-The previous inference baseline remains accessible in Git history at
-[commit 7b16388](https://github.com/jhserodio/exploring-vit-algorithms-improvments/commit/7b16388f3675cc6af104fb4b2176eeb18bbff254),
-but is not a current runtime dependency.
+- **V0: concluída.** Referência Rust/CPU do DINOv2 Base com CLS
+  e grid 37×37 validada contra checkpoint oficial fixado:
+  [relatório](docs/v0-validation.md).
+- **Fase 1: ambiente configurado.** Rust CPU e CUDA Rust em
+  containers separados, dependências fixadas, contratos e
+  probes de soma residual, softmax e GEMM; CI de compilação CUDA
+  sem GPU e CI CPU. Preflight e Compose documentados em [PHASE1.md](PHASE1.md).
+- **Fase 2: planejada/detalhada.** Harness de fixtures sintéticas,
+  oráculos, comparadores, testes negativos e relatório JSON.
+  [Especificação](docs/phase2-test-harness.md).
 
-## Why dense spatial features?
+`source-ready` e `sandbox-config-ready` não significam que
+a RTX 5070 Ti já executou os kernels. O estado `gpu-verified`
+exige execução no computador local, com os logs correspondentes.
+O forward CUDA integral do modelo não faz parte desta branch.
 
-For `facebook/dinov2-base` with 518x518 input and 14x14 patches:
+## Ambiente e validação (não requer GPU)
 
-- `cls` / global descriptor: `[1, 768]`
-- `patch_tokens` in row-major token order: `[1, 1369, 768]`
-- `spatial_map` in channel-first order: `[1, 768, 37, 37]`
+```sh
+python3 scripts/sandbox_preflight.py --json
+python3 -m unittest discover -s scripts -p 'test_sandbox_preflight.py'
+bash -n scripts/*.sh
+docker compose --profile gpu config --quiet
 
-The features are **not tumor probabilities or segmentation masks**. Any
-clinical-data task requires suitable labels, an independently trained/validated
-task head, patient-level splits and uncertainty estimates.
-
-## Run CPU correctness tests
-
-```bash
 cd motor_inferencia
+cargo test --locked
 cargo fmt --all -- --check
-cargo test
-cargo clippy --all-targets -- -D warnings
+cargo clippy --all-targets --locked -- -D warnings
 ```
 
-## Run original DINOv2 checkpoint through the Rust CPU reference
+`Dockerfile.cpu` é usado pelo serviço CPU e `Dockerfile` contém
+CUDA 13.3 para o serviço GPU:
 
-Prepare local `models/model.safetensors` and `data/example.png` (see
-[PHASE0.md](PHASE0.md)). A full 518px/12-layer CPU forward may be slow.
-
-```bash
-cd motor_inferencia
-cargo run --release -- --cpu --weights ../models/model.safetensors --image ../data/example.png \
-  --export-prefix ../results/reference/dinov2
-```
-
-This exports input, CLS, complete normalized hidden state and the channel-first
-spatial map as local FP32 little-endian arrays. Files under `results/` and
-`*.f32le` are ignored by Git; exported patient-derived tensors remain sensitive.
-
-To independently compare all 1,370 output tokens against Hugging Face:
-
-```bash
-python3 scripts/compare_dinov2_reference.py \
-  --image data/example.png --model-dir models --device cpu
-```
-
-This command requires optional Python dependencies `numpy`, `torch` and
-`transformers`. The independent full-token comparison **passed using real official weights** in [V0 CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357). For the pinned checkpoint digest, errors, synthetic input and reproducibility, see [V0 validation](docs/v0-validation.md).
-
-## Run the first native CUDA Rust kernel
-
-CUDA Rust Tile needs **CUDA 13.3+** and NVIDIA GPU `sm_120` support. It is
-kept out of CPU CI; it must run on the RTX 5070 Ti before being marked validated.
-
-```bash
-cargo run --release --manifest-path cuda-kernels/Cargo.toml
-# Or, on Fedora with NVIDIA Container Toolkit:
+```sh
+docker compose run --build --rm vit-cpu
+# Somente com driver NVIDIA, toolkit/container runtime compatível:
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-The CUDA Rust Tile source includes **residual addition, stable row softmax,
-and tiled GEMM** (with a GPU-only conformance runner). Their CUDA 13.3 source build passed [GitHub Actions](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345),
-including nontrivial deterministic fixtures. Real-device
-execution is still unverified; use `bash scripts/v1-gpu-acceptance.sh` on
-the RTX 5070 Ti to capture local evidence. **No whole-model GPU inference
-exists yet.** `motor_inferencia --cuda` fails explicitly, without CPU fallback.
-See [Phase 1 gates](docs/phase1-design.md) and the
-[roadmap reassessment](docs/roadmap-reassessment.md).
+Use diretórios de pesquisa dedicados; volumes `:z` podem alterar
+labels SELinux no Fedora, inclusive quando montados como read-only.
 
-## Architecture and research gates
+## GPU local: instrumentação, não algoritmo de pesquisa
 
-- `ModelAdapter`: model-owned weights, preprocessing and output semantics.
-- `DenseFeatures`: framework-independent CLS, patch tokens and spatial map.
-- `KernelSpec` (implemented): validation of op shape, FP32 dtype, layout and
-  device; a full GPU-buffer/stream `OperationBackend` remains pending.
-- `DatasetProvider / Geometry`: slide coordinates, scale, annotated regions,
-  patient-safe split and provenance.
-- `TaskHead`: trained/evaluated separately from the backbone, depending on
-  what labels are actually available.
+```sh
+bash scripts/v1-gpu-acceptance.sh results/v1-gpu
+```
 
-For the scientific phases and SP-01 to SP-16 validation matrix, see
-[roadmap.md](roadmap.md). For current acceptance gates see
-[test-checklist-roadmap.md](test-checklist-roadmap.md).
+O script captura versões de driver, CUDA, Rust, CPU/GPU e Git SHA,
+e executa os **smoke tests isolados** para residual, softmax e GEMM.
+Falhas de GPU são propagadas, sem fallback para CPU. Também é possível
+usar o serviço Docker `vit-gpu` do Compose.
 
-## Hardware and reproducibility
+Os probes existem **somente para validar a toolchain e servir como
+fixtures**; não representam nova atenção, ganho de desempenho
+ou qualquer melhoria de classificação.
 
-Target: NVIDIA RTX 5070 Ti, Ryzen 7 CPU, host Fedora. CPU work handles image
-decode, tiling, geometry and input batches; GPU work should eventually keep
-model layers on the device without intermediate CPU round trips. Record
-`scripts/collect_env.sh`, model hash, image hash, model-specific preprocessing,
-dtypes and tested CUDA/Rust versions per result. A green CPU CI is **not**
-proof of CUDA compatibility or OSCC quality.
+## Referência matemática V0
 
-Data and weights must stay outside Git; never commit unredacted patient images
-or derived outputs. Check licenses and access for alternative pathology
-backbones (e.g. Hibou-B or Phikon-v2).
+O DINOv2 Base na grade nativa 518px produz:
+`CLS=[1,768]`, `patch_tokens=[1,1369,768]`,
+`spatial_map=[1,768,37,37]`. A CI de referência
+[validou numericamente todos os tokens](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357)
+com pesos reais e entrada sintética idêntica ao Hugging Face.
+Isso não é um detector de OSCC.
+
+Para repetir localmente, consultar [PHASE0.md](PHASE0.md).
+
+## Onde seguir
+
+[Roadmap somente de sandbox](roadmap.md) ·
+[Análise de mudanças de escopo](docs/roadmap-reassessment.md) ·
+[Ambiente Fase 1](docs/phase1-design.md) ·
+[Harness de testes Fase 2](docs/phase2-test-harness.md) ·
+[Checklist operacional](test-checklist-roadmap.md).
+
+Dados de pacientes, pesos, features derivadas e relatórios
+sensíveis permanecem fora do Git, conforme `.gitignore`.

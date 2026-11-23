@@ -1,55 +1,66 @@
-# Phase 1 — Native CUDA Rust and complete DINOv2 forward
+# Fase 1 — Sandbox Rust/CUDA: ambiente e testes de infraestrutura
 
-**Status:** IN PROGRESS — CUDA 13.3 source typechecked in [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345);
-17 Rust CPU tests passed in [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132046). V0 was closed with original checkpoint numerical
-parity, but the complete DINOv2 Base CUDA Rust forward has **not yet passed**
-GPU execution or per-layer numerical equivalence. See the
-[technical plan](docs/phase1-design.md) and [canonical roadmap](roadmap.md).
+**Status: configuração concluída (2026-11-23).** Esta fase prepara o
+ambiente e os smoke tests; **não implementa algoritmos de pesquisa nem
+inferência CUDA completa do DINOv2**.
 
-## CPU operation contract and safety tests
+## Entregas de provisionamento
 
-```bash
+- [x] Containers independentes: Rust CPU e CUDA 13.3 + Rust GPU.
+- [x] Docker Compose com serviço CPU padrão e perfil explícito `gpu`.
+- [x] Cargo manifests e lockfiles distintos, `cutile = "=0.5.0"`.
+- [x] Contratos de operações com validação de shape, dtype, layout, device
+  e erro explícito quando CUDA não está disponível.
+- [x] Kernels sintéticos de *smoke testing*: residual, softmax e GEMM;
+  não são melhorias algorítmicas e não substituem um modelo neural.
+- [x] CI CPU e CUDA-source (formatação, testes e compilação).
+- [x] Preflight offline, testes de configuração, sintaxe Bash e
+  validação Docker Compose integrados à CI.
+- [x] Script local para verificação da GPU real e coleta de evidências
+  (driver, toolkit, GPU, Rust, Git SHA, resultados).
+
+A fase considera-se **pronta para preparar experimentos** quando o
+provisionamento e a CI passam. O resultado `gpu-verified` é **separado**:
+depende de rodar o script na RTX 5070 Ti e armazenar os resultados.
+
+## Comandos verificados sem GPU
+
+```sh
+python3 scripts/sandbox_preflight.py
+python3 -m unittest discover -s scripts -p 'test_sandbox_preflight.py'
+bash -n scripts/*.sh
+docker compose --profile gpu config --quiet
+
 cd motor_inferencia
-cargo test
+cargo test --locked
 cargo fmt --all -- --check
-cargo clippy --all-targets -- -D warnings
+cargo clippy --all-targets --locked -- -D warnings
 ```
 
-`operation_contract.rs` checks shapes, dtypes, layouts and explicit
-CPU/GPU residency for GEMM, residual, softmax, LayerNorm and GELU. This
-is *not* proof the GPU model is implemented.
+A compilação do crate GPU é executada na
+[CI de CUDA Rust](.github/workflows/cuda-rust-source.yml), dentro do
+container de desenvolvimento CUDA 13.3, sem afirmar execução em GPU.
 
-## Native CUDA 13.3 source compilation (without GPU execution)
+## Comandos disponíveis para a RTX 5070 Ti (ainda não executados aqui)
 
-```bash
-cargo check --manifest-path cuda-kernels/Cargo.toml --all-targets
-```
-
-The separate CUDA source CI is informative. Compilation alone cannot
-validate the JIT kernel, driver runtime or RTX 5070 Ti performance.
-
-## Run isolated kernels on the local RTX 5070 Ti
-
-```bash
+```sh
+# Requer NVIDIA driver, CUDA e Cargo no host:
 bash scripts/v1-gpu-acceptance.sh results/v1-gpu
-# or
+
+# Alternativa com NVIDIA Container Toolkit:
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-The operation probe includes residual addition, last-axis softmax and
-a tiled GEMM. These kernels are initial fixtures: they do not yet cover
-the 1,370-token masked attention or whole-model execution.
+Os scripts não possuem fallback silencioso para CPU. Um sucesso na CI
+de compilação **não** demonstra o runtime GPU; registre a verificação
+de hardware antes do primeiro experimento GPU.
 
-The acceptance harness fails if NVIDIA/driver/CUDA prerequisites are
-missing; logs and environment summaries remain local under `results/`.
+## Próxima fase
 
-## Blocking gates
+**Fase 2 = harness de testes, fixtures, oráculos e falhas controladas.**
+Não inclui implementação de kernels de otimização, treinamento,
+diagnóstico ou carregamento de imagens reais de pacientes.
 
-- [x] CUDA 13.3 source build/typecheck passed [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345); GPU execution not verified.
-- [ ] All residual/softmax/GEMM probes execute on RTX 5070 Ti and capture GPU-vs-CPU errors.
-- [ ] Complete LayerNorm/GELU, projection and attention kernels are validated.
-- [ ] All 12 DINOv2 blocks execute with original weights on the GPU.
-- [ ] CPU versus GPU full hidden-state and per-layer numerical parity passes.
-- [ ] GPU memory, cold/warm timing and transfer accounting are captured.
-
-No task above is considered complete based solely on CPU CI or code review.
+Detalhes: [docs/phase1-design.md](docs/phase1-design.md),
+[docs/phase2-test-harness.md](docs/phase2-test-harness.md),
+[roadmap.md](roadmap.md).

@@ -14,6 +14,6 @@ command -v cargo >/dev/null || { echo "FAIL: Rust/Cargo not installed" >&2; exit
 } > "$out/environment.txt"
 echo "Running native CUDA Rust GPU probes (residual, softmax, matmul)."
 echo "A GPU or JIT failure is a FAIL; output is not proof of full model inference."
-cargo run --release --manifest-path cuda-kernels/Cargo.toml -- all \
+cargo run --release --locked --manifest-path cuda-kernels/Cargo.toml -- all \
     2>&1 | tee "$out/kernels.log"
 echo "Kernel probes passed. Full DINOv2 CUDA inference is still a separate gate."

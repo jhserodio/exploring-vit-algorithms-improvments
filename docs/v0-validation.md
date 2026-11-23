@@ -56,8 +56,9 @@ not upload private images or exported feature tensors.
 
 ## Boundaries
 
-**V0 is complete as a numerical baseline only.** The CUDA Rust Tile kernel
-still needs testing on the RTX 5070 Ti, and full DINOv2 CUDA inference is a
-separate Phase 1 deliverable. Actual OSCC tumor classification, segmentation
-and patient-level evaluation remain open future research tasks. A synthetic
+**V0 is complete as a numerical baseline only.** CUDA Rust Tile smoke probes
+still require local execution on the RTX 5070 Ti; sandbox Phase 1 prepares
+their environment and tooling. Full GPU DINOv2 inference, OSCC tumor
+classification, segmentation and patient-level evaluation belong to future
+experimental branches, not this sandbox roadmap. A synthetic
 input and feature-vector parity are not evidence of cancer-detection quality.
