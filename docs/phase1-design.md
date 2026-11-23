@@ -10,7 +10,7 @@ and `[1,768,37,37]` spatial map.
 | Gate | Deliverable | Required evidence |
 | --- | --- | --- |
 | V1.A | Runtime-independent op contracts (shapes, dtype, layout, device) | CPU CI |
-| V1.B | Native CUDA Rust source builds with CUDA 13.3 | Container source-check CI; NO GPU claim |
+| V1.B | Native CUDA Rust source builds with CUDA 13.3 | [Passed source CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345); NO GPU claim |
 | V1.C | Residual, stable softmax and GEMM probes on RTX 5070 Ti | Recorded GPU output, driver, toolkit and Git SHA |
 | V1.D | Remaining FP32 LayerNorm, exact GELU, patch projection, attention | CPU/GPU operator fixtures and errors |
 | V1.E | Complete 12-block DINOv2 Base forward on device | Original checkpoint and normalized input, no CPU fallback |

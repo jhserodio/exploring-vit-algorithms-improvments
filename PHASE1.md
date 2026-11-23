@@ -1,6 +1,7 @@
 # Phase 1 — Native CUDA Rust and complete DINOv2 forward
 
-**Status:** IN PROGRESS. V0 was closed with original checkpoint numerical
+**Status:** IN PROGRESS — CUDA 13.3 source typechecked in [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345);
+17 Rust CPU tests passed in [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132046). V0 was closed with original checkpoint numerical
 parity, but the complete DINOv2 Base CUDA Rust forward has **not yet passed**
 GPU execution or per-layer numerical equivalence. See the
 [technical plan](docs/phase1-design.md) and [canonical roadmap](roadmap.md).
@@ -44,8 +45,8 @@ missing; logs and environment summaries remain local under `results/`.
 
 ## Blocking gates
 
-- [ ] CUDA source build and typecheck succeeds.
-- [ ] All initial probes execute on the actual RTX 5070 Ti.
+- [x] CUDA 13.3 source build/typecheck passed [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345); GPU execution not verified.
+- [ ] All residual/softmax/GEMM probes execute on RTX 5070 Ti and capture GPU-vs-CPU errors.
 - [ ] Complete LayerNorm/GELU, projection and attention kernels are validated.
 - [ ] All 12 DINOv2 blocks execute with original weights on the GPU.
 - [ ] CPU versus GPU full hidden-state and per-layer numerical parity passes.

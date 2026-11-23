@@ -22,7 +22,7 @@ branch `feat/testing-background`.
 - [x] CI green for the standalone CPU implementation: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
 - [x] Official DINOv2 Base weights load and the full FP32 CPU forward emits finite features — [pinned checkpoint CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45245472357).
 - [x] CLS, 1,369 patches, complete hidden state and spatial-map parity passed with exact CHW ordering — [validation record](docs/v0-validation.md).
-- [ ] CUDA Rust Tile source builds in CUDA 13.3 CI (not a GPU execution result).
+- [x] CUDA Rust Tile source passed typechecking in CUDA 13.3 CI: [run 45250132345](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345); not GPU execution.
 - [ ] Residual, softmax and GEMM execute on RTX 5070 Ti with comparison against nontrivial reference fixtures.
 - [ ] LayerNorm/GELU/patch projection/attention implemented and verified on GPU.
 - [ ] Full 12-block DINOv2 forward executes on the GPU with original checkpoint.

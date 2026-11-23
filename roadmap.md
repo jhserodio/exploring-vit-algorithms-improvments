@@ -94,8 +94,8 @@ gates, and **the entire original model must run on the RTX 5070 Ti**.
 **V1.A — Runtime-independent operation contracts**
 - [x] Implement model-independent FP32 operation shape, dtype, layout and
       device validation for GEMM, residual, full-row softmax, LayerNorm and GELU.
-- [x] Add synthetic tests for valid and invalid ViT tensor dimensions and
-      explicit rejection of CPU/GPU mismatch (source/tests; CPU CI gate).
+- [x] Tensor shape/device/dtype contract tests passed with 17 total Rust
+      tests: [CPU CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132046).
 - [ ] Wire the operation contracts to a complete on-device execution interface
       with device buffers, streams, capability errors and no implicit fallback.
 
@@ -104,15 +104,18 @@ gates, and **the entire original model must run on the RTX 5070 Ti**.
 - [x] Add native CUDA Rust Tile source for elementwise residual, stable
       last-axis softmax and tiled GEMM (unverified until built/run).
 - [x] Add separate GPU-source-only CI in CUDA 13.3 container.
-- [ ] GPU kernel crate passes source typechecking and source formatting
-      in CI. **This is not equivalent to GPU execution.**
+- [x] CUDA 13.3 source typechecking of residual, softmax and GEMM passed:
+      [source CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345). Strict formatting and pinned dependency lockfile
+      are required. **This is not equivalent to GPU execution.**
 
 **V1.C — Real-device kernel correctness**
 - [x] Add strict GPU-only local conformance runner with environment capture.
 - [ ] Run residual, row softmax, and GEMM on the RTX 5070 Ti and attach
       synchronized GPU result logs, commit SHA and CUDA/driver/toolkit versions.
-- [ ] Compare nontrivial numerical fixtures (not only all-ones), including
-      large logits, different GEMM shapes and invalid inputs.
+- [x] Implement nontrivial deterministic residual, large-logit softmax
+      and fractional GEMM fixtures; source typechecked in [CI](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345).
+- [ ] Execute those fixtures on RTX 5070 Ti and record GPU-vs-CPU
+      numerical error, including realistic sizes and invalid inputs.
 
 **V1.D — Coverage of all DINOv2 mathematical operations**
 - [ ] Implement correct FP32 LayerNorm (eps=1e-6), exact GELU, patch

@@ -75,7 +75,8 @@ docker compose --profile gpu run --build --rm vit-gpu
 ```
 
 The CUDA Rust Tile source includes **residual addition, stable row softmax,
-and tiled GEMM** (with a GPU-only conformance runner). Their real-device
+and tiled GEMM** (with a GPU-only conformance runner). Their CUDA 13.3 source build passed [GitHub Actions](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45250132345),
+including nontrivial deterministic fixtures. Real-device
 execution is still unverified; use `bash scripts/v1-gpu-acceptance.sh` on
 the RTX 5070 Ti to capture local evidence. **No whole-model GPU inference
 exists yet.** `motor_inferencia --cuda` fails explicitly, without CPU fallback.

@@ -79,11 +79,12 @@ fn residual_probe() -> Result<(), Error> {
     assert_eq!(N % TILE, 0);
     gpu_spec(Kernel::ResidualAdd, &[&[N], &[N]], &[N]);
     let host_a: Arc<Vec<f32>> = Arc::new(
-        (0..N).map(|i| ((i % 101) as f32 - 50.0) * 0.03125).collect(),
+        (0..N)
+            .map(|i| ((i % 101) as f32 - 50.0) * 0.03125)
+            .collect(),
     );
-    let host_b: Arc<Vec<f32>> = Arc::new(
-        (0..N).map(|i| ((i % 71) as f32 - 35.0) * 0.0625).collect(),
-    );
+    let host_b: Arc<Vec<f32>> =
+        Arc::new((0..N).map(|i| ((i % 71) as f32 - 35.0) * 0.0625).collect());
     let a = api::copy_host_vec_to_device(&host_a);
     let b = api::copy_host_vec_to_device(&host_b);
     let out = api::zeros::<f32>(&[N]).partition([TILE]);
@@ -107,7 +108,9 @@ fn softmax_probe() -> Result<(), Error> {
             .map(|i| (i / N) as f32 * 10000.0 + ((i % N) as f32 - 64.0) * 0.125)
             .collect(),
     );
-    let x = api::copy_host_vec_to_device(&host).sync()?.reshape(&[M, N])?;
+    let x = api::copy_host_vec_to_device(&host)
+        .sync()?
+        .reshape(&[M, N])?;
     let out = api::zeros::<f32>(&[M, N]).partition([1, N]);
     let (out, _) = kernels::row_softmax(out, x).sync()?;
     let values: Vec<f32> = out.unpartition().to_host_vec().sync()?;
@@ -146,8 +149,12 @@ fn matmul_probe() -> Result<(), Error> {
             .map(|idx| (((2 * (idx / N) + idx % N) % 11) as i32 - 5) as f32 / 8.0)
             .collect(),
     );
-    let x = api::copy_host_vec_to_device(&host_x).sync()?.reshape(&[M, K])?;
-    let y = api::copy_host_vec_to_device(&host_y).sync()?.reshape(&[K, N])?;
+    let x = api::copy_host_vec_to_device(&host_x)
+        .sync()?
+        .reshape(&[M, K])?;
+    let y = api::copy_host_vec_to_device(&host_y)
+        .sync()?
+        .reshape(&[K, N])?;
     let out = api::zeros::<f32>(&[M, N]).partition([BM, BN]);
     let generics = vec![
         "f32".to_string(),

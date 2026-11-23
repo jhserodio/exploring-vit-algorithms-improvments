@@ -36,16 +36,7 @@ jobs:
           nvcc --version
           rustc --version
           cargo --version
-      - name: Format and emit CUDA Rust source snapshot (temporary)
-        run: |
-          cargo fmt --manifest-path cuda-kernels/Cargo.toml
-          printf 'GPU_RUSTFMT::'
-          base64 -w0 cuda-kernels/src/main.rs
-          echo
+      - name: Strict CUDA Rust source formatting
+        run: cargo fmt --manifest-path cuda-kernels/Cargo.toml -- --check
       - name: Typecheck CUDA Rust kernels (no GPU execution)
-        run: cargo check --manifest-path cuda-kernels/Cargo.toml --all-targets
-      - name: Capture CUDA Cargo.lock (temporary)
-        run: |
-          printf 'GPU_CARGO_LOCK::'
-          base64 -w0 cuda-kernels/Cargo.lock
-          echo
+        run: cargo check --manifest-path cuda-kernels/Cargo.toml --locked --all-targets
