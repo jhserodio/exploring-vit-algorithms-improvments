@@ -169,7 +169,8 @@ The organization above is a **target layout**, not a requirement to create every
 - [ ] Compare reference CPU, reference CUDA and candidate optimized operations when supported.
 - [ ] Record maximum absolute error, norm-based relative error and failure count, with **dtype- and operation-specific** thresholds fixed before analysis.
 - [ ] Add deterministic inference checks for repeated execution in supported deterministic modes; document any nondeterministic kernels.
-- [ ] Compare DINOv2 embeddings with a trustworthy checkpoint-equivalent reference implementation or validated fixtures to catch model-loading/preprocessing errors.
+- [x] Add opt-in Rust FP32 tensor export and independent Hugging Face/PyTorch identical-input parity runner (implemented; not yet run on a real checkpoint).
+- [ ] Compare DINOv2 embeddings with a trustworthy checkpoint-equivalent reference implementation or validated fixtures to catch model-loading/preprocessing errors (execute the parity runner and inspect its report).
 - [ ] Verify unsupported operation injection is rejected; assert registered optimized code path actually executes.
 
 **Exit gate:** No optimization can be benchmarked as a scientific improvement before it passes its corresponding correctness tests.
@@ -376,5 +377,5 @@ Work in this order; avoid creating the entire framework in advance.
 | 8. Scientific reporting | P2 | Planned |
 | 9. Optional Ollama/control plane | P2 | Planned |
 
-**Evidence policy:** A checked subtask indicates implementation or the stated CI evidence, not that the enclosing phase has passed its exit gate. CUDA, checkpoint loading and medical-data experiments still require their own successful runs. [PHASE0.md](PHASE0.md) is the execution guide; [test-checklist-roadmap.md](test-checklist-roadmap.md) tracks near-term acceptance gates without copying this plan.
+**Evidence policy:** A checked subtask indicates implementation or the stated CI evidence, not that the enclosing phase has passed its exit gate. The optional reference-parity script and additional CLI tests were introduced on 2026-11-23; they require successful CI and a separate real-checkpoint parity run before their results can be claimed. CUDA, checkpoint loading and medical-data experiments still require their own successful runs. [PHASE0.md](PHASE0.md) is the execution guide; [test-checklist-roadmap.md](test-checklist-roadmap.md) tracks near-term acceptance gates without copying this plan.
 
