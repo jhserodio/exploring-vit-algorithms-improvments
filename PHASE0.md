@@ -92,7 +92,7 @@ storage or arbitrary system paths to be relabeled.
 - [x] Standalone spatial representation with a deterministic CLS/patch/map contract and CPU tests implemented.
 - [x] Crop geometry and inverse mapping checks implemented.
 - [x] CUDA Rust residual-add kernel added in a separate package.
-- [ ] Fresh CPU CI green for this migration.
+- [x] Fresh CPU CI green for this migration: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849) (14 tests passed).
 - [ ] Original checkpoint full CPU inference passes independent CLS + patch parity.
 - [ ] CUDA Rust kernel executes successfully on the RTX 5070 Ti with environment recorded.
 - [ ] Full model native CUDA forward integrated with reusable operation interfaces.

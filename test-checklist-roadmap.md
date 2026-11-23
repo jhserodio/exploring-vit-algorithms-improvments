@@ -17,7 +17,7 @@ branch `feat/testing-background`.
 
 ## Open validation and research gates
 
-- [ ] CI is green for this branch's new no-Candle implementation.
+- [x] CI green for the no-Candle CPU implementation: [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
 - [ ] Real weights load and full DINOv2 CPU forward produces finite features.
 - [ ] Full hidden-state parity with Hugging Face reference has passed.
 - [ ] CUDA Rust Tile operation probe passes on RTX 5070 Ti with CUDA 13.3+.

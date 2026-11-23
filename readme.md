@@ -3,7 +3,7 @@
 Research sandbox in **Rust**, focused on mathematically controlled, model-agnostic
 algorithm experiments for oral squamous cell carcinoma (OSCC) histopathology.
 
-**Current migration (2026-11-23):** Candle has been removed from the executable
+**Current migration (2026-11-23):** [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849) passed (10 unit + 4 CLI tests, Rustfmt, Clippy, Python help). Candle has been removed from the executable
 code. There are now two explicitly separate paths:
 
 1. **`motor_inferencia/`** — standalone Rust/ndarray DINOv2 Base **CPU numerical

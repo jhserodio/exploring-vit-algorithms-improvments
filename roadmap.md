@@ -75,7 +75,7 @@ not as a speculative full framework.
 - [x] Add deterministic synthetic tests for CLS/patch/map ordering and
       geometric mappings (test code implemented).
 - [x] Extend the independent HF parity harness to all 1,370 normalized tokens.
-- [ ] New CPU CI (test, fmt, Clippy, CLI) succeeds on the refactor branch.
+- [x] New CPU CI (10 unit + 4 CLI tests, fmt, Clippy, Python help) passed on [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849).
 - [ ] Full original `facebook/dinov2-base` checkpoint CPU inference passes;
       validate all model keys, shapes and finiteness.
 - [ ] Validate CLS **and all patch tokens** against the identical-input
@@ -228,7 +228,7 @@ on the RTX 5070 Ti, with numerical tolerances documented.
 2. [x] R02 — replace Candle references with independent Rust CPU implementation.
 3. [x] R03 — add native CUDA Rust Tile residual operation probe.
 4. [x] R04 — prepare full-token PyTorch parity script.
-5. [ ] R05 — prove CPU CI and original checkpoint parity.
+5. [ ] R05 — CPU CI verified on [14-test Rust CPU CI on 2026-11-23](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/45242097849); original-checkpoint parity remains open.
 6. [ ] R06 — execute GPU operation probe on RTX 5070 Ti.
 7. [ ] R07 — implement full GPU attention and DINOv2 forward.
 8. [ ] R08 — audit OSCC patient/slide labels and spatial metadata.
