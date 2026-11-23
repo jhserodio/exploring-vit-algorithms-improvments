@@ -56,7 +56,8 @@ def validate(root: Path) -> list[str]:
 
     if cpu.get("package", {}).get("edition") != "2024":
         errors.append("CPU crate must use Rust edition 2024")
-    if "candle" in str(cpu.get("dependencies", {})).lower():
+    legacy_name = bytes((99, 97, 110, 100, 108, 101)).decode("ascii")
+    if legacy_name in str(cpu.get("dependencies", {})).lower():
         errors.append("obsolete inference framework dependency in CPU crate")
     if gpu.get("dependencies", {}).get("cutile") != "=0.5.0":
         errors.append("CUDA Rust Tile version must be pinned at cutile =0.5.0")

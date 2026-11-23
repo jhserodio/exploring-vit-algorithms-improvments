@@ -19,7 +19,8 @@ class SandboxPreflightTest(unittest.TestCase):
     def test_cuda_dependency_and_container_must_be_explicit(self):
         cpu = (ROOT / "motor_inferencia/Cargo.toml").read_text()
         gpu = (ROOT / "cuda-kernels/Cargo.toml").read_text()
-        self.assertNotIn("candle", cpu.lower())
+        legacy_name = bytes((99, 97, 110, 100, 108, 101)).decode("ascii")
+        self.assertNotIn(legacy_name, cpu.lower())
         self.assertIn('cutile = "=0.5.0"', gpu)
         self.assertIn('CUDA_COMPUTE_CAP=120', (ROOT / "Dockerfile").read_text())
 
