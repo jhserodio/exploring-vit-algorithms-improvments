@@ -12,12 +12,14 @@ use operation_contract::{Device as ContractDevice, Kernel, KernelSpec, TensorSpe
 fn gpu_spec(kernel: Kernel, inputs: &[&[usize]], output: &[usize]) {
     let request = KernelSpec {
         kernel,
-        inputs: inputs.iter()
+        inputs: inputs
+            .iter()
             .map(|dims| TensorSpec::f32(dims, ContractDevice::Cuda))
             .collect(),
         output: TensorSpec::f32(output, ContractDevice::Cuda),
     };
-    request.require_device(ContractDevice::Cuda)
+    request
+        .require_device(ContractDevice::Cuda)
         .expect("invalid GPU operation contract; no CPU fallback");
 }
 
@@ -41,13 +43,11 @@ mod kernels {
         input: &Tensor<f32, { [-1, -1] }>,
     ) {
         let x: Tile<f32, { [BM, BN] }> = input.load_like(out);
-        let max = reduce_max(x, 1_i32)
-            .reshape(shape![BM, 1])
-            .broadcast(out.shape());
+        let max: Tile<f32, { [BM] }> = reduce_max(x, 1_i32);
+        let max = max.reshape(shape![BM, 1]).broadcast(out.shape());
         let numerator = exp(x - max);
-        let denominator = reduce_sum(numerator, 1_i32)
-            .reshape(shape![BM, 1])
-            .broadcast(out.shape());
+        let denominator: Tile<f32, { [BM] }> = reduce_sum(numerator, 1_i32);
+        let denominator = denominator.reshape(shape![BM, 1]).broadcast(out.shape());
         out.store(true_div(numerator, denominator));
     }
 
@@ -126,7 +126,11 @@ fn matmul_probe() -> Result<(), Error> {
     let (out, _, _) = kernels::matmul(out, x, y).generics(generics).sync()?;
     let actual: Vec<f32> = out.unpartition().to_host_vec().sync()?;
     assert_eq!(actual.len(), M * N);
-    assert!(actual.iter().all(|&value| value.is_finite() && (value - K as f32).abs() <= 1e-3));
+    assert!(
+        actual
+            .iter()
+            .all(|&value| value.is_finite() && (value - K as f32).abs() <= 1e-3)
+    );
     println!("PASS matmul: [{M},{K}] × [{K},{N}] = [{M},{N}] FP32");
     Ok(())
 }
