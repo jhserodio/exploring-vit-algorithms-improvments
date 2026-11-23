@@ -4,9 +4,11 @@ x-research-base: &research-base
     dockerfile: Dockerfile
   working_dir: /workspace/motor_inferencia
   volumes:
-    - .:/workspace
-    - ${DATA_DIR:-./data}:/data:ro
-    - ${MODEL_DIR:-./models}:/models:ro
+    # Shared SELinux labels permit both services to mount the same paths on Fedora.
+    # :z relabels host files: use dedicated paths. See PHASE0.md.
+    - .:/workspace:z
+    - ${DATA_DIR:-./data}:/data:ro,z
+    - ${MODEL_DIR:-./models}:/models:ro,z
 
 services:
   vit-cpu:
@@ -18,6 +20,9 @@ services:
     profiles: ["gpu"]
     environment:
       CUDA_COMPUTE_CAP: "120"
+    # Explicit CUDA inference, not the Dockerfile's CPU-test default.
+    # Expects /models/model.safetensors and /data/example.png.
+    command: ["cargo", "run", "--release", "--features", "cuda", "--", "--cuda", "--weights", "/models/model.safetensors", "--image", "/data/example.png"]
     deploy:
       resources:
         reservations:
