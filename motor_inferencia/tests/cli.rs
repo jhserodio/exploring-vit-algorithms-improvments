@@ -33,7 +33,13 @@ fn contradictory_device_options_are_rejected() {
 #[cfg(not(feature = "cuda"))]
 #[test]
 fn cuda_without_feature_does_not_silently_fallback_to_cpu() {
-    let result = invoke(&["--image", "missing.png", "--weights", "missing.safetensors", "--cuda"]);
+    let result = invoke(&[
+        "--image",
+        "missing.png",
+        "--weights",
+        "missing.safetensors",
+        "--cuda",
+    ]);
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr).contains("CUDA is disabled"));
 }
