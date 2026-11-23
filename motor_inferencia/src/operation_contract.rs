@@ -53,7 +53,9 @@ impl TensorSpec {
             return Err("empty or zero-dimension tensor".to_string());
         }
         self.dims.iter().try_fold(1usize, |count, value| {
-            count.checked_mul(*value).ok_or("tensor size overflow".to_string())
+            count
+                .checked_mul(*value)
+                .ok_or("tensor size overflow".to_string())
         })
     }
 }
@@ -83,7 +85,9 @@ impl KernelSpec {
             }
         }
         let input = |idx: usize| {
-            self.inputs.get(idx).map(|value| value.dims.as_slice())
+            self.inputs
+                .get(idx)
+                .map(|value| value.dims.as_slice())
                 .ok_or("missing kernel input".to_string())
         };
         match self.kernel {
@@ -108,7 +112,8 @@ impl KernelSpec {
                     return Err("GEMM expects 2 input tensors".into());
                 }
                 let (a, b) = (input(0)?, input(1)?);
-                if a.len() != 2 || b.len() != 2
+                if a.len() != 2
+                    || b.len() != 2
                     || self.output.dims.len() != 2
                     || a[1] != b[0]
                     || self.output.dims != [a[0], b[1]]
@@ -153,23 +158,58 @@ mod tests {
     fn spec(kind: Kernel, input_shapes: &[&[usize]], output: &[usize]) -> KernelSpec {
         KernelSpec {
             kernel: kind,
-            inputs: input_shapes.iter().map(|s| TensorSpec::f32(s, Device::Cpu)).collect(),
+            inputs: input_shapes
+                .iter()
+                .map(|s| TensorSpec::f32(s, Device::Cpu))
+                .collect(),
             output: TensorSpec::f32(output, Device::Cpu),
         }
     }
 
     #[test]
     fn gemm_contract_accepts_transformer_shapes_and_rejects_mismatched_k() {
-        assert!(spec(Kernel::Gemm, &[&[1370, 768], &[768, 3072]], &[1370, 3072]).validate().is_ok());
-        assert!(spec(Kernel::Gemm, &[&[1370, 768], &[767, 3072]], &[1370, 3072]).validate().is_err());
+        assert!(
+            spec(Kernel::Gemm, &[&[1370, 768], &[768, 3072]], &[1370, 3072])
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            spec(Kernel::Gemm, &[&[1370, 768], &[767, 3072]], &[1370, 3072])
+                .validate()
+                .is_err()
+        );
     }
 
     #[test]
     fn residual_softmax_layernorm_contracts_cover_spatial_token_dimensions() {
-        assert!(spec(Kernel::ResidualAdd, &[&[1370, 768], &[1370, 768]], &[1370, 768]).validate().is_ok());
-        assert!(spec(Kernel::SoftmaxLast, &[&[1370, 1370]], &[1370, 1370]).validate().is_ok());
-        assert!(spec(Kernel::LayerNorm, &[&[1370, 768], &[768], &[768]], &[1370, 768]).validate().is_ok());
-        assert!(spec(Kernel::SoftmaxLast, &[&[1370, 1370]], &[1370, 769]).validate().is_err());
+        assert!(
+            spec(
+                Kernel::ResidualAdd,
+                &[&[1370, 768], &[1370, 768]],
+                &[1370, 768]
+            )
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            spec(Kernel::SoftmaxLast, &[&[1370, 1370]], &[1370, 1370])
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            spec(
+                Kernel::LayerNorm,
+                &[&[1370, 768], &[768], &[768]],
+                &[1370, 768]
+            )
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            spec(Kernel::SoftmaxLast, &[&[1370, 1370]], &[1370, 769])
+                .validate()
+                .is_err()
+        );
     }
 
     #[test]
@@ -182,7 +222,11 @@ mod tests {
         assert!(request.validate().unwrap_err().contains("dtype mismatch"));
         request.inputs[0].dtype = DType::F32;
         assert!(request.require_device(Device::Cuda).is_err());
-        assert!(TensorSpec::f32(&[usize::MAX, 2], Device::Cpu).elements().is_err());
+        assert!(
+            TensorSpec::f32(&[usize::MAX, 2], Device::Cpu)
+                .elements()
+                .is_err()
+        );
         assert!(TensorSpec::f32(&[0, 768], Device::Cpu).elements().is_err());
     }
 }

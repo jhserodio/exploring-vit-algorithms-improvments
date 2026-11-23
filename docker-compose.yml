@@ -1,9 +1,7 @@
 x-research-base: &research-base
-  build:
-    context: .
-    dockerfile: Dockerfile
   volumes:
-    # Shared :z labels for Fedora SELinux; relabels host files.
+    # Shared SELinux labels for Fedora. Use dedicated data directories:
+    # :z may relabel host files, even on read-only mounts.
     - .:/workspace:z
     - ${DATA_DIR:-./data}:/data:ro,z
     - ${MODEL_DIR:-./models}:/models:ro,z
@@ -11,18 +9,24 @@ x-research-base: &research-base
 services:
   vit-cpu:
     <<: *research-base
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
     working_dir: /workspace/motor_inferencia
-    command: ["cargo", "test"]
+    command: ["cargo", "test", "--locked"]
 
   vit-gpu:
     <<: *research-base
     profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile
     working_dir: /workspace/cuda-kernels
     environment:
       CUDA_COMPUTE_CAP: "120"
       CUDA_TOOLKIT_PATH: "/usr/local/cuda"
-    # Native CUDA Rust operation probe only, not full model inference.
-    command: ["cargo", "run", "--release"]
+    # GPU-only operation probes, not full DINOv2 inference.
+    command: ["cargo", "run", "--release", "--", "all"]
     deploy:
       resources:
         reservations:

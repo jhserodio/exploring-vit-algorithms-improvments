@@ -1,0 +1,4 @@
+# Reproducible CPU-only baseline image. No CUDA toolkit or driver required.
+FROM rust:1.90-bookworm
+WORKDIR /workspace/motor_inferencia
+CMD ["cargo", "test", "--locked"]

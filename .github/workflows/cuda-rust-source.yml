@@ -1,0 +1,43 @@
+name: CUDA Rust 0.5 source build (GPU not required)
+on:
+  push:
+    branches:
+      - feat/testing-background
+    paths:
+      - "cuda-kernels/**"
+      - "motor_inferencia/src/operation_contract.rs"
+      - ".github/workflows/cuda-rust-source.yml"
+  workflow_dispatch:
+jobs:
+  source-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    container:
+      image: nvidia/cuda:13.3.0-devel-ubuntu24.04
+    env:
+      CUDA_TOOLKIT_PATH: /usr/local/cuda
+      CUDA_HOME: /usr/local/cuda
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build prerequisites
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates curl build-essential pkg-config libssl-dev \
+            clang libclang-dev git
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: CUDA and Rust version info
+        run: |
+          nvcc --version
+          rustc --version
+          cargo --version
+      - name: Format and emit CUDA Rust source snapshot (temporary)
+        run: |
+          cargo fmt --manifest-path cuda-kernels/Cargo.toml
+          printf 'GPU_RUSTFMT::'
+          base64 -w0 cuda-kernels/src/main.rs
+          echo
+      - name: Typecheck CUDA Rust kernels (no GPU execution)
+        run: cargo check --manifest-path cuda-kernels/Cargo.toml --all-targets

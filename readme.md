@@ -74,16 +74,20 @@ cargo run --release --manifest-path cuda-kernels/Cargo.toml
 docker compose --profile gpu run --build --rm vit-gpu
 ```
 
-This validates a residual-add operation over `1370 * 768` FP32 values.
-It does **not** execute a whole neural network. `motor_inferencia --cuda` fails
-explicitly until the full model's GPU operation backend is implemented.
+The CUDA Rust Tile source includes **residual addition, stable row softmax,
+and tiled GEMM** (with a GPU-only conformance runner). Their real-device
+execution is still unverified; use `bash scripts/v1-gpu-acceptance.sh` on
+the RTX 5070 Ti to capture local evidence. **No whole-model GPU inference
+exists yet.** `motor_inferencia --cuda` fails explicitly, without CPU fallback.
+See [Phase 1 gates](docs/phase1-design.md) and the
+[roadmap reassessment](docs/roadmap-reassessment.md).
 
 ## Architecture and research gates
 
 - `ModelAdapter`: model-owned weights, preprocessing and output semantics.
 - `DenseFeatures`: framework-independent CLS, patch tokens and spatial map.
-- `OperationBackend` (planned): reference or CUDA Rust operator with an
-  explicit capability contract; never silent fallback to CPU.
+- `KernelSpec` (implemented): validation of op shape, FP32 dtype, layout and
+  device; a full GPU-buffer/stream `OperationBackend` remains pending.
 - `DatasetProvider / Geometry`: slide coordinates, scale, annotated regions,
   patient-safe split and provenance.
 - `TaskHead`: trained/evaluated separately from the backbone, depending on
