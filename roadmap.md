@@ -5,7 +5,7 @@
 **Primary implementation:** Rust + Hugging Face Candle + CUDA  
 **Initial reference backbone:** `facebook/dinov2-base` (replaceable)  
 **Reference hardware:** NVIDIA RTX 5070 Ti (Blackwell, compute capability 12.0); AMD Ryzen 7 (exact CPU SKU to be confirmed)  
-**Status:** Implementation plan — not a statement that the described modules or tests already exist.
+**Status (2026-11-23):** Progress audited against the implementation and [successful CPU CI (2026-10-08)](https://github.com/jhserodio/exploring-vit-algorithms-improvments/actions/runs/37717374470). GPU and full model-reference parity remain unverified.
 
 ## 1. Research purpose
 
@@ -122,15 +122,18 @@ The organization above is a **target layout**, not a requirement to create every
 
 ### Phase 0 — Restore a trustworthy runnable baseline **[P0]**
 
-**Current evidence:** `motor_inferencia/src/main.rs` is an incomplete image-to-tensor prototype; `Dockerfile` refers to CUDA 12.4 / capability `89`; the current RTX 5070 Ti requires Blackwell-aware tooling (`sm_120`).
+**Current evidence:** Four CPU unit tests, formatting, Clippy and CLI smoke passed 2026-10-08; DINOv2 Base inference code exists; CUDA 12.8.1/`sm_120` configured but not executed on the RTX 5070 Ti. See [PHASE0.md](PHASE0.md).
 
-- [ ] Fix Rust compile errors and return the preprocessed tensor with correct `Result<Tensor>` handling.
-- [ ] Replace dummy image generation with deterministic in-repository fixtures; assert shape, channel order, dtype, range and known pixel mappings.
-- [ ] Decouple CPU-only unit tests from mandatory CUDA device creation.
-- [ ] Verify NVIDIA driver, compatible CUDA toolkit (12.8+ for native Blackwell support), Candle submodule and `cudarc` build compatibility. Pin tested versions.
-- [ ] Remove unnecessary privileged-container defaults for ordinary runs; keep profiling privileges separate if required.
-- [ ] Add `cargo fmt`, `cargo clippy`, build/smoke tests and a CPU-only CI path. Run actual CUDA tests on the local GPU.
-- [ ] Implement a real DINOv2 forward pass (feature extraction) and verify shape and numeric finiteness.
+- [x] Fix Rust compile errors and return the preprocessed tensor with correct `Result<Tensor>` handling (CPU CI 2026-10-08).
+- [x] Replace dummy image generation with deterministic CPU fixtures and tests for shape, CHW order, dtype and known normalized pixel values.
+- [x] Decouple CPU-only unit tests from mandatory CUDA device creation.
+- [x] Configure CUDA Toolkit 12.8.1 / `sm_120` and pin Candle submodule (configuration only).
+- [ ] Verify CUDA/driver/`cudarc` compatibility on the **physical RTX 5070 Ti** and record tested versions.
+- [x] Remove unnecessary privileged-container defaults for ordinary runs; keep profiling privileges separate if required.
+- [x] Add `cargo fmt`, `cargo clippy`, unit tests, CPU-only CI and CLI-help smoke (passed 2026-10-08).
+- [ ] Run actual CUDA model inference on the local GPU and record the result.
+- [x] Implement DINOv2 Base forward, checkpoint loader and runtime checks for shape/finiteness (implementation only).
+- [ ] Verify real-checkpoint forward output, shape, numerical finiteness and independent reference parity.
 
 **Exit gate:** Clean build; input-to-embedding inference works on the GPU; deterministic fixtures pass on CPU; environment versions are captured. **No OSCC accuracy claims yet.**
 
@@ -142,14 +145,15 @@ The organization above is a **target layout**, not a requirement to create every
 - [ ] Detect train/validation/test leakage at **patient** level (and slide level); check derivatives and augmented tiles inherit their original grouping.
 - [ ] Store seeds, hashes, Git commit, model revision, exact adapter/preprocessor versions, hardware/driver/CUDA/Candle versions.
 - [ ] Define result schema with per-sample predictions, metric summary, timing samples and failure records.
-- [ ] Create tiny synthetic fixtures for unit tests; reserve labeled OSCC images for genuine experiments.
+- [x] Create synthetic CPU preprocessing fixtures; reserve labeled OSCC images for genuine experiments.
 
 **Exit gate:** Repeated runs with the same manifest/config are traceable to the same inputs and settings; test suite rejects intentional patient leakage.
 
 ### Phase 2 — Model adapters and proof of model independence **[P0]**
 
 - [ ] Design the `ModelAdapter` and `ModelRegistry` contracts for supported input/output types and feature extraction.
-- [ ] Implement DINOv2 as the first adapter, including native preprocessing and checkpoint loading.
+- [x] Implement DINOv2 Base model-specific code, preprocessing and checkpoint loader (not yet a model adapter).
+- [ ] Wrap DINOv2 into a validated `ModelAdapter` with native preprocessing and real-checkpoint inference.
 - [ ] Implement a **second supported vision backbone adapter** to prove portability (choose based on actual Candle/checkpoint compatibility, not merely theoretical availability).
 - [ ] Run identical adapter conformance tests on both models: load, preprocess, tensor metadata, repeated prediction, finite output, serialization.
 - [ ] Define a fixed downstream classifier/linear-probe protocol before comparing OSCC recognition; maintain identical patient partitions and training/evaluation rules.
@@ -326,7 +330,7 @@ Use split and dataset references rather than copying protected source images int
 
 Work in this order; avoid creating the entire framework in advance.
 
-1. [ ] **S01 — Fix baseline build:** repair `main.rs`, validate the input tensor; add CPU fixture tests.
+1. [x] **S01 — Fix CPU baseline build:** repair `main.rs`, validate input tensor and add CPU fixture tests (2026-10-08 CI).
 2. [ ] **S02 — Fix Blackwell environment:** test CUDA/Candle compatibility on the RTX 5070 Ti; capture versions.
 3. [ ] **S03 — Introduce minimal `ModelAdapter`:** DINOv2 loads and extracts embeddings from a fixed test image.
 4. [ ] **S04 — Add manifest and leakage tests:** group patients/slides and validate labels/checksums.
@@ -361,10 +365,10 @@ Work in this order; avoid creating the entire framework in advance.
 
 | Phase | Priority | Status |
 |---|---|---|
-| 0. Runnable baseline and Blackwell verification | P0 | Not completed / to validate |
-| 1. Manifests and reproducibility | P0 | Planned |
-| 2. Model-independent adapters | P0 | Planned |
-| 3. Numerical correctness | P0 | Planned |
+| 0. Runnable baseline and Blackwell verification | P0 | CPU build/test confirmed; GPU and parity pending |
+| 1. Manifests and reproducibility | P0 | Synthetic fixture and env script exist; manifests pending |
+| 2. Model-independent adapters | P0 | DINOv2 code exists; adapter and second model pending |
+| 3. Numerical correctness | P0 | Preprocessing/constants tested; numerical parity pending |
 | 4. Labeled OSCC evaluation | P1 | Planned |
 | 5. CPU/GPU benchmarking | P1 | Planned |
 | 6. Robustness and generalization | P1 | Planned |
@@ -372,4 +376,5 @@ Work in this order; avoid creating the entire framework in advance.
 | 8. Scientific reporting | P2 | Planned |
 | 9. Optional Ollama/control plane | P2 | Planned |
 
-**Update this tracker only after running and reviewing the corresponding acceptance tests.**
+**Evidence policy:** A checked subtask indicates implementation or the stated CI evidence, not that the enclosing phase has passed its exit gate. CUDA, checkpoint loading and medical-data experiments still require their own successful runs. [PHASE0.md](PHASE0.md) is the execution guide; [test-checklist-roadmap.md](test-checklist-roadmap.md) tracks near-term acceptance gates without copying this plan.
+
