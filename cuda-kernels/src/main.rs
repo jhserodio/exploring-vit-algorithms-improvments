@@ -4,6 +4,8 @@
 //! GPU execution MUST fail if no compatible device or toolkit is available.
 //! This program deliberately performs GPU work, with no CPU substitute.
 use cutile::prelude::*;
+use cutile::tensor::Reshape;
+use std::sync::Arc;
 
 #[path = "../../motor_inferencia/src/operation_contract.rs"]
 mod operation_contract;
@@ -76,13 +78,21 @@ fn residual_probe() -> Result<(), Error> {
     const TILE: usize = 128;
     assert_eq!(N % TILE, 0);
     gpu_spec(Kernel::ResidualAdd, &[&[N], &[N]], &[N]);
-    let a = api::ones::<f32>(&[N]);
-    let b = api::ones::<f32>(&[N]);
+    let host_a: Arc<Vec<f32>> = Arc::new(
+        (0..N).map(|i| ((i % 101) as f32 - 50.0) * 0.03125).collect(),
+    );
+    let host_b: Arc<Vec<f32>> = Arc::new(
+        (0..N).map(|i| ((i % 71) as f32 - 35.0) * 0.0625).collect(),
+    );
+    let a = api::copy_host_vec_to_device(&host_a);
+    let b = api::copy_host_vec_to_device(&host_b);
     let out = api::zeros::<f32>(&[N]).partition([TILE]);
     let (out, _, _) = kernels::residual_add(out, a, b).sync()?;
     let values: Vec<f32> = out.unpartition().to_host_vec().sync()?;
     assert_eq!(values.len(), N);
-    assert!(values.iter().all(|&x| x.is_finite() && x == 2.0));
+    for (i, value) in values.iter().enumerate() {
+        assert!(value.is_finite() && (*value - (host_a[i] + host_b[i])).abs() <= 1e-6);
+    }
     println!("PASS residual_add: {N} FP32 elements");
     Ok(())
 }
@@ -91,15 +101,28 @@ fn softmax_probe() -> Result<(), Error> {
     const M: usize = 4;
     const N: usize = 128;
     gpu_spec(Kernel::SoftmaxLast, &[&[M, N]], &[M, N]);
-    let x = api::ones::<f32>(&[M, N]);
+    // Large positive logits ensure the fused kernel subtracts row maxima.
+    let host: Arc<Vec<f32>> = Arc::new(
+        (0..M * N)
+            .map(|i| (i / N) as f32 * 10000.0 + ((i % N) as f32 - 64.0) * 0.125)
+            .collect(),
+    );
+    let x = api::copy_host_vec_to_device(&host).sync()?.reshape(&[M, N])?;
     let out = api::zeros::<f32>(&[M, N]).partition([1, N]);
     let (out, _) = kernels::row_softmax(out, x).sync()?;
     let values: Vec<f32> = out.unpartition().to_host_vec().sync()?;
     assert_eq!(values.len(), M * N);
-    for row in values.chunks_exact(N) {
-        let sum: f32 = row.iter().sum();
+    for r in 0..M {
+        let row_in = &host[r * N..(r + 1) * N];
+        let row_out = &values[r * N..(r + 1) * N];
+        let max = row_in.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        let denominator: f32 = row_in.iter().map(|x| (x - max).exp()).sum();
+        for (input, output) in row_in.iter().zip(row_out.iter()) {
+            let expected = (input - max).exp() / denominator;
+            assert!(output.is_finite() && (output - expected).abs() <= 1e-5);
+        }
+        let sum: f32 = row_out.iter().sum();
         assert!((sum - 1.0).abs() <= 1e-5);
-        assert!(row.iter().all(|x| (*x - 1.0 / N as f32).abs() <= 1e-5));
     }
     println!("PASS fused_softmax: [{M},{N}] FP32, rows normalized");
     Ok(())
@@ -113,8 +136,18 @@ fn matmul_probe() -> Result<(), Error> {
     const BN: usize = 16;
     const BK: usize = 8;
     gpu_spec(Kernel::Gemm, &[&[M, K], &[K, N]], &[M, N]);
-    let x = api::ones::<f32>(&[M, K]);
-    let y = api::ones::<f32>(&[K, N]);
+    let host_x: Arc<Vec<f32>> = Arc::new(
+        (0..M * K)
+            .map(|idx| (((idx / K + idx % K) % 13) as i32 - 6) as f32 / 8.0)
+            .collect(),
+    );
+    let host_y: Arc<Vec<f32>> = Arc::new(
+        (0..K * N)
+            .map(|idx| (((2 * (idx / N) + idx % N) % 11) as i32 - 5) as f32 / 8.0)
+            .collect(),
+    );
+    let x = api::copy_host_vec_to_device(&host_x).sync()?.reshape(&[M, K])?;
+    let y = api::copy_host_vec_to_device(&host_y).sync()?.reshape(&[K, N])?;
     let out = api::zeros::<f32>(&[M, N]).partition([BM, BN]);
     let generics = vec![
         "f32".to_string(),
@@ -126,11 +159,15 @@ fn matmul_probe() -> Result<(), Error> {
     let (out, _, _) = kernels::matmul(out, x, y).generics(generics).sync()?;
     let actual: Vec<f32> = out.unpartition().to_host_vec().sync()?;
     assert_eq!(actual.len(), M * N);
-    assert!(
-        actual
-            .iter()
-            .all(|&value| value.is_finite() && (value - K as f32).abs() <= 1e-3)
-    );
+    for row in 0..M {
+        for col in 0..N {
+            let expected: f32 = (0..K)
+                .map(|k| host_x[row * K + k] * host_y[k * N + col])
+                .sum();
+            let value = actual[row * N + col];
+            assert!(value.is_finite() && (value - expected).abs() <= 1e-3);
+        }
+    }
     println!("PASS matmul: [{M},{K}] × [{K},{N}] = [{M},{N}] FP32");
     Ok(())
 }

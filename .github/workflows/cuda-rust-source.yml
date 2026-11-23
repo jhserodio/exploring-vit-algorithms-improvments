@@ -44,3 +44,8 @@ jobs:
           echo
       - name: Typecheck CUDA Rust kernels (no GPU execution)
         run: cargo check --manifest-path cuda-kernels/Cargo.toml --all-targets
+      - name: Capture CUDA Cargo.lock (temporary)
+        run: |
+          printf 'GPU_CARGO_LOCK::'
+          base64 -w0 cuda-kernels/Cargo.lock
+          echo
